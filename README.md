@@ -16,6 +16,8 @@
 
 **مهم:** سلسلة relay مخصصة لوضع VPN في Shadowsocks. عند إيقافها، يعود TUN إلى SOCKS الأصلي الخاص بـShadowsocks. تطبيقات HTTPS التي لا تثق بشهادات المستخدم أو تستخدم certificate pinning قد لا تعمل مع وضع MITM؛ بعض التطبيقات لا تقبل شهادات CA التي يضيفها المستخدم أصلًا.
 
+**حدّ اتجاه النقل:** هذا الدمج يضع RelayGuard أمام حركة التطبيقات ويستخدم SOCKS المحلي لـShadowsocks كوصلة upstream لـRelayGuard. لا يمرّر اتصال `ss-local` نفسه إلى VPS عبر Google Apps Script؛ اتصال عميل Shadowsocks بخادمه يبقى اتصال TCP مباشرًا. نشر Apps Script و`UrlFetchApp` يدعمان جلب HTTP/HTTPS، ولا يوفران نفق TCP خامًا لبروتوكول Shadowsocks. لتنفيذ الاتجاه العكسي الذي يجعل اتصال Shadowsocks بالخادم يعبر RelayGuard، يلزم endpoint أو مكوّن خادمي يدعم TCP خامًا (مثل SOCKS5/HTTP CONNECT أو WebSocket مع مكوّن متوافق على الخادم)، ولا تكفي حقول Deployment URL و`auth_key` و`front_domain` وحدها.
+
 ## الإعداد على الهاتف
 
 1. أضف ملف Shadowsocks صالحًا يحتوي خادم VPS، ثم اترك **Settings → Service mode** على **VPN**.

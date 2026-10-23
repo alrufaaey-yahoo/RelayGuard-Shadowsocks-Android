@@ -45,8 +45,10 @@ import com.therealaleph.mhrv.Native
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 import java.io.FileDescriptor
@@ -132,8 +134,9 @@ class VpnService : BaseVpnService(), BaseService.Interface {
 
     override fun killProcesses(scope: CoroutineScope) {
         if (relayHandle != 0L) {
-            Native.stopProxy(relayHandle)
+            val handle = relayHandle
             relayHandle = 0L
+            scope.launch(Dispatchers.IO) { Native.stopProxy(handle) }
         }
         super.killProcesses(scope)
         active = false
@@ -167,7 +170,7 @@ class VpnService : BaseVpnService(), BaseService.Interface {
 
     override val isVpnService get() = true
 
-    private fun startRelayGuard() {
+    private suspend fun startRelayGuard() {
         val deployments = DataStore.relayDeploymentUrls
             .split(Regex("[,;\\s]+"))
             .mapNotNull { raw ->
@@ -208,19 +211,26 @@ class VpnService : BaseVpnService(), BaseService.Interface {
             put("coalesce_step_ms", DataStore.relayCoalesceStepMs)
             put("coalesce_max_ms", DataStore.relayCoalesceMaxMs)
         }
-        relayHandle = Native.startProxy(config.toString())
+        relayHandle = withContext(Dispatchers.IO) { Native.startProxy(config.toString()) }
         if (relayHandle == 0L) throw IOException("RelayGuard failed to start; inspect Android service logs")
-        val ready = (0 until 60).any {
-            try {
-                java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", RELAY_SOCKS_PORT), 100) }
-                true
-            } catch (_: IOException) {
-                Thread.sleep(50)
-                false
+        val ready = withContext(Dispatchers.IO) {
+            var attempt = 0
+            var listening = false
+            while (attempt < 60 && !listening) {
+                try {
+                    java.net.Socket().use {
+                        it.connect(java.net.InetSocketAddress("127.0.0.1", RELAY_SOCKS_PORT), 100)
+                    }
+                    listening = true
+                } catch (_: IOException) {
+                    delay(50)
+                }
+                attempt += 1
             }
+            listening
         }
         if (!ready) {
-            Native.stopProxy(relayHandle)
+            withContext(Dispatchers.IO) { Native.stopProxy(relayHandle) }
             relayHandle = 0L
             throw IOException("RelayGuard SOCKS listener did not become ready")
         }
