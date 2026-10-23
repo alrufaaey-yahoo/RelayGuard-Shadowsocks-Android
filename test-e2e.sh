@@ -15,7 +15,8 @@ ADB="${ADB:-/Volumes/Data/workspace/android/platform-tools/adb}"
 AVD="${AVD:-Medium_Phone_API_36.1}"
 APK="${APK:-$SCRIPT_DIR/mobile/build/outputs/apk/debug/mobile-arm64-v8a-debug.apk}"
 SSSERVER="${SSSERVER:-$SCRIPT_DIR/core/src/main/rust/shadowsocks-rust/target/release/ssserver}"
-PKG="com.github.shadowsocks"
+PKG="com.alrufaaey.shadow"
+MAIN_ACTIVITY="com.github.shadowsocks.MainActivity"
 
 # ── SS config ───────────────────────────────────────────────────────────────
 SS_ADDR="0.0.0.0:8388"
@@ -126,29 +127,33 @@ info "APK installed."
 info "Step 5: Configuring profile..."
 
 # 5a. Launch app once to initialize databases.
-# ensureNotEmpty() creates a default profile (id=1) and sets profileId=1.
+# The app intentionally starts with no demo profile; this test creates one below.
 # serviceMode defaults to "vpn".
 info "  Launching app to initialize databases..."
-"$ADB" shell am start -W -n "$PKG/.MainActivity"
+"$ADB" shell am start -W -n "$PKG/$MAIN_ACTIVITY"
 sleep 8
 screenshot "01_init"
 # Force a checkpoint to flush WAL into main database file
 "$ADB" shell am force-stop "$PKG"
 sleep 2
 
-# 5b. Update the default profile (id=1) to point to our test server.
-# Profile table columns: id, name, host, remotePort, password, method, ...
+# 5b. Create an active profile (id=1) pointing to our test server.
+# Profile table columns follow core/schemas/.../PrivateDatabase/29.json.
 # With debug build, we can use run-as to copy the database out, modify it, and copy it back.
-info "  Updating default profile via sqlite3..."
+info "  Creating test profile via sqlite3..."
 
 # Extract profile.db and WAL/SHM files using exec-out (binary-safe)
 "$ADB" exec-out run-as "$PKG" cat databases/profile.db > /tmp/profile.db
 "$ADB" exec-out run-as "$PKG" cat databases/profile.db-wal > /tmp/profile.db-wal 2>/dev/null || true
 "$ADB" exec-out run-as "$PKG" cat databases/profile.db-shm > /tmp/profile.db-shm 2>/dev/null || true
+"$ADB" exec-out run-as "$PKG" cat databases/config.db > /tmp/config.db
+"$ADB" exec-out run-as "$PKG" cat databases/config.db-wal > /tmp/config.db-wal 2>/dev/null || true
+"$ADB" exec-out run-as "$PKG" cat databases/config.db-shm > /tmp/config.db-shm 2>/dev/null || true
 
 # Verify and checkpoint WAL into main DB
 file /tmp/profile.db
 sqlite3 /tmp/profile.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+sqlite3 /tmp/config.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
 
 # Check tables
 info "  Tables in profile.db:"
@@ -160,8 +165,12 @@ if ! sqlite3 /tmp/profile.db "SELECT count(*) FROM Profile;" >/dev/null 2>&1; th
     fail "Profile table not found — database may not have been initialized"
 fi
 
-# Modify the profile using host sqlite3
-sqlite3 /tmp/profile.db "UPDATE Profile SET host='$SS_HOST_FROM_EMU', remotePort=$SS_PORT, password='$SS_PASSWORD', method='$SS_METHOD', name='Test Server' WHERE id=1;"
+# Insert a complete row because the app no longer creates a sample profile.
+sqlite3 /tmp/profile.db "INSERT OR REPLACE INTO Profile (id,name,host,remotePort,password,method,route,remoteDns,proxyApps,bypass,udpdns,ipv6,metered,individual,plugin,udpFallback,subscription,tx,rx,userOrder) VALUES (1,'Test Server','$SS_HOST_FROM_EMU',$SS_PORT,'$SS_PASSWORD','$SS_METHOD','all','dns.google',0,0,0,0,0,'',NULL,NULL,0,0,0,0);"
+# DataStore stores the selected profile id in config.db as an eight-byte big-endian long.
+sqlite3 /tmp/config.db "INSERT OR REPLACE INTO KeyValuePair (key,valueType,value) VALUES ('profileId',4,X'0000000000000001');"
+sqlite3 /tmp/profile.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+sqlite3 /tmp/config.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
 
 # Verify update
 info "  Verifying profile update..."
@@ -170,12 +179,15 @@ sqlite3 /tmp/profile.db "SELECT id, name, host, remotePort, method FROM Profile;
 done
 
 # Push modified database back (without WAL — clean state)
-rm -f /tmp/profile.db-wal /tmp/profile.db-shm
+rm -f /tmp/profile.db-wal /tmp/profile.db-shm /tmp/config.db-wal /tmp/config.db-shm
 "$ADB" push /tmp/profile.db /data/local/tmp/profile.db
 "$ADB" shell "cat /data/local/tmp/profile.db | run-as $PKG sh -c 'cat > databases/profile.db'"
-# Remove old WAL/SHM so Room starts fresh
-"$ADB" shell "run-as $PKG rm -f databases/profile.db-wal databases/profile.db-shm"
+"$ADB" push /tmp/config.db /data/local/tmp/config.db
+"$ADB" shell "cat /data/local/tmp/config.db | run-as $PKG sh -c 'cat > databases/config.db'"
+# Remove old WAL/SHM so Room starts fresh.
+"$ADB" shell "run-as $PKG rm -f databases/profile.db-wal databases/profile.db-shm databases/config.db-wal databases/config.db-shm"
 "$ADB" shell rm /data/local/tmp/profile.db
+"$ADB" shell rm /data/local/tmp/config.db
 
 info "  Profile configuration done."
 
@@ -185,7 +197,7 @@ info "  Profile configuration done."
 info "Step 6: Enabling VPN..."
 
 # Launch the app
-"$ADB" shell am start -W -n "$PKG/.MainActivity"
+"$ADB" shell am start -W -n "$PKG/$MAIN_ACTIVITY"
 sleep 3
 screenshot "02_app_launched"
 

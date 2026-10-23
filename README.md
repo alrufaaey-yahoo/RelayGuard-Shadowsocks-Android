@@ -2,6 +2,10 @@
 
 تطبيق Android مخصص يجمع واجهة Shadowsocks مع محرك RelayGuard المضمّن. معرّف الحزمة هو `com.alrufaaey.shadow`، وتبقى إدارة ملف Shadowsocks وخدمة VPN مبنية على مشروع Shadowsocks Android.
 
+## هوية الحزمة في Android
+
+`applicationId = com.alrufaaey.shadow` هو المعرّف الذي يظهر في النظام ويُستخدم للتثبيت و`adb`، أما `namespace = com.github.shadowsocks` فيبقى عمدًا لتطابق أسماء حزم Kotlin/Java وموارد `R` والفئات الموجودة في manifests. لا تغيّر `namespace` أو أسماء `package` في الشيفرة لمجرد تغيير هوية التطبيق؛ تغييرها يتطلب إعادة تسمية واسعة لكل الوحدات. تطبيق Android TV منفصل ويحتفظ بالمعرّف `com.github.shadowsocks.tv`. أزيل إعداد Google Services القديم من وحدة الهاتف لأنها لا تستخدم Firebase، ويقتصر ملف Firebase المتبقي على معرّف TV.
+
 ## مسار الاتصال
 
 عند تفعيل **Settings → Script relay → Enable Script relay chain** ثم الضغط على اتصال، تبدأ خدمة RelayGuard أولًا على منفذ HTTP عشوائي مربوط إلى `127.0.0.1` فقط. بعد نجاح فحص جاهزية المستمع يبدأ `ss-local` ويستخدم ذلك المنفذ كـHTTP CONNECT upstream للوصول إلى خادم Shadowsocks. يوجّه VPN التطبيقات إلى SOCKS المحلي الخاص بـShadowsocks:
