@@ -16,3 +16,5 @@ release/
 # Generated Rust JNI binaries are produced by Gradle
 **/src/main/jniLibs/
 *.so
+
+.kotlin/
