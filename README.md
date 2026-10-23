@@ -1,70 +1,66 @@
-# RelayGuard × Shadowsocks for Android
+# GCP SHADOW for Android
 
-نسخة Android مبنية على واجهة **Shadowsocks** الأصلية، مع دمج محرك **RelayGuard** بوصفه طبقة محلية أمام عميل Shadowsocks. يبقى التطبيق وإدارة ملفات الاتصال وخدمة VPN مبنية على Shadowsocks.
+تطبيق Android مخصص يجمع واجهة Shadowsocks مع محرك RelayGuard المضمّن. معرّف الحزمة هو `com.alrufaaey.shadow`، وتبقى إدارة ملف Shadowsocks وخدمة VPN مبنية على مشروع Shadowsocks Android.
 
 ## مسار الاتصال
 
-عند تفعيل **Settings → Script relay → Enable Script relay chain** واستخدام وضع الخدمة **VPN**، يكون مسار TCP:
+عند تفعيل **Settings → Script relay → Enable Script relay chain** ثم الضغط على اتصال، تبدأ خدمة RelayGuard أولًا على منفذ HTTP عشوائي مربوط إلى `127.0.0.1` فقط. بعد نجاح فحص جاهزية المستمع يبدأ `ss-local` ويستخدم ذلك المنفذ كـHTTP CONNECT upstream للوصول إلى خادم Shadowsocks. يوجّه VPN التطبيقات إلى SOCKS المحلي الخاص بـShadowsocks:
 
 ```text
-تطبيقات الجهاز → TUN / tun2socks → RelayGuard SOCKS5 (127.0.0.1:18081)
-               → Shadowsocks local SOCKS (127.0.0.1:<portProxy>)
-               → خادم Shadowsocks/VPS → الوجهة
+تطبيقات الجهاز → VPN/TUN → SOCKS المحلي لـShadowsocks
+             → اتصال Shadowsocks مشفّر إلى VPS عبر HTTP CONNECT
+             → خادم Shadowsocks/VPS → الإنترنت
 ```
 
-في وضع Apps Script، تمر اتصالات HTTP/HTTPS التي يعالجها RelayGuard عبر نشر Apps Script؛ اتصال RelayGuard الخارجي إلى Google front endpoint يمر كذلك من SOCKS الخاص بـShadowsocks. الاتصالات الخام التي لا تُرسل عبر Apps Script تمر إلى الوجهة من خلال Shadowsocks. لا يسمح هذا الدمج برجوع تدفق محدد مباشرةً إلى الشبكة عند تعطل وصلة upstream SOCKS؛ يفشل ذلك التدفق بدل تجاوز سلسلة الوكلاء.
+لا يوجَّه TUN مباشرة إلى SOCKS الخاص بـRelayGuard، ولا يوجد upstream عكسي إلى Shadowsocks داخل RelayGuard؛ هذا يمنع الحلقة ويجعل عنوان الخروج بعد اتصال Shadowsocks هو عنوان VPS. لا يتم الاحتفاظ بمنفذ ثابت، ويُوقف RelayGuard بعد إغلاق عميل Shadowsocks. إذا تعذر إنشاء الوكيل المحلي، يفشل بدء الاتصال بدل الرجوع بصمت إلى اتصال مباشر.
 
-**مهم:** سلسلة relay مخصصة لوضع VPN في Shadowsocks. عند إيقافها، يعود TUN إلى SOCKS الأصلي الخاص بـShadowsocks. تطبيقات HTTPS التي لا تثق بشهادات المستخدم أو تستخدم certificate pinning قد لا تعمل مع وضع MITM؛ بعض التطبيقات لا تقبل شهادات CA التي يضيفها المستخدم أصلًا.
+هذا النقل TCP فقط: يُعطّل UDP وUDP fallback أثناء السلسلة. كما أن إضافات Shadowsocks غير مدعومة مع هذا النقل حاليًا. يلزم أن يستطيع RelayGuard فتح اتصال TCP إلى مضيف VPS ومنفذه؛ أما استخدام Apps Script لتمرير أنواع أخرى من حركة HTTP/HTTPS فيخضع لقدرات إعداد RelayGuard والنشر نفسه. تثبيت شهادة CA اختياري بحسب استخدام اعتراض TLS، ولا تثبّت إلا شهادة تثق بها.
 
-**حدّ اتجاه النقل:** Script relay يضع RelayGuard أمام حركة التطبيقات، ويستخدم اتصال Shadowsocks للوصول إلى Apps Script؛ جلب Apps Script لصفحات الويب يخرج من شبكة Google. لا يحوّل Google Apps Script إلى نفق TCP خام، ولا توفر حقول `Deployment URL` و`auth_key` و`front_domain` وحدها وسيطًا إلى VPS. يتضمن هذا الإصدار عميل HTTP CONNECT اختياريًا لنقل اتصال Shadowsocks إلى VPS عبر وسيط CONNECT حقيقي مُعد مسبقًا؛ التطبيق لا ينشئ هذا الوسيط ولا يستضيفه.
+## الإعداد
 
-## الإعداد على الهاتف
+1. ثبّت التطبيق وافتح **Settings → Script relay**.
+2. أدخل رابط HTTPS لملف نصي مباشر ثم اضغط **Refresh RelayGuard settings**. يجب أن يحتوي الملف على:
 
-1. أضف ملف Shadowsocks صالحًا يحتوي خادم VPS، ثم اترك **Settings → Service mode** على **VPN**.
-2. افتح **Settings → Script relay**. أدخل رابط نشر Apps Script الكامل المنتهي بـ`/exec` أو Deployment ID، و`auth_key` المطابق للنشر. يمكن إدخال عدة روابط/معرّفات مفصولة بمسافة أو فاصلة أو فاصلة منقوطة.
-3. اضبط `front_domain` عند الحاجة. الافتراضي `www.google.com`.
-4. اضغط **Install RelayGuard CA**. على Android 11 وما بعده يصدّر التطبيق الشهادة إلى `Downloads/relayguard-ca.crt` ويفتح إعدادات النظام؛ ابحث عن “CA certificate” وثبّتها لفئة “VPN and apps”. لا تثبّت شهادة إلا إذا كنت تثق بنشر Apps Script الذي أدخلته.
-5. راجع خيارات **Advanced**، ثم فعّل **Enable Script relay chain**. اتصل من شاشة Shadowsocks ووافق على إذن VPN. يستخدم التطبيق ملف Shadowsocks الحالي كوصلة upstream تلقائيًا.
+   ```text
+   URL=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+   KEY=replace-with-your-auth-key
+   FRONT=google.com
+   ```
 
-يبقى `auth_key` في قاعدة بيانات التطبيق الخاصة ولا يظهر في ملخص الحقل. بيانات اعتماد نشر Apps Script حساسة؛ لا تشارك لقطات الشاشة أو ملفات النسخ الاحتياطي التي قد تتضمنها.
+   يقبل `URL` رابط Apps Script أو Deployment ID. يُنزّل التطبيق ملفًا لا يتجاوز 32 KiB، ويتطلب HTTPS ورمز HTTP 200، ويتحقق من القيم قبل حفظها. لا تضع المفتاح في مستودع عام أو رابط يمكن لأي شخص تعديله. يظل المفتاح محفوظًا في قاعدة بيانات التطبيق الخاصة ولا يظهر في ملخص واجهة الإعدادات.
+3. اضبط وضع الخدمة في Shadowsocks على **VPN**. عند تفعيل Script relay، امنع التطبيق تغيير الوضع أثناء اتصال نشط.
+4. فعّل **Enable Script relay chain** ثم اتصل بملف Shadowsocks المستورد. يبدأ RelayGuard تلقائيًا قبل `ss-local`، ولا يحتاج المستخدم إلى كتابة المنفذ المحلي.
+5. خيارات البروتوكول المتقدمة وتصدير شهادة RelayGuard متاحة في صفحة Script relay. قد تحتاج بعض التطبيقات إلى شهادة CA، وقد ترفض التطبيقات ذات certificate pinning الشهادة.
 
-## خيارات Advanced المدمجة
+## ملفات الخوادم والحافظة
 
-تتضمن صفحة الإعدادات: التحقق من شهادة TLS، YouTube عبر Apps Script، مستوى السجل، عدد الطلبات المتوازية، حظر QUIC وSTUN وDoH، تمرير DoH عبر الترحيل، فرض HTTP/1.1، وإعدادات تجميع الدفعات. تم تثبيت `upstream_socks5` داخليًا على منفذ Shadowsocks المحلي كي لا ينفصل ترتيب السلسلة أو يسمح بتجاوزها.
+لا ينشئ التطبيق ملف `example.shadowsocks.org` عند التثبيت. استيراد ملفات الخادم المتاح من الواجهة هو **Import from Clipboard**. يقبل التطبيق روابط `alrufaaey://...`، كما يقبل روابط `ss://...` القديمة للتوافق عند الاستيراد.
 
-## نقل اتصال Shadowsocks عبر HTTP CONNECT
+في القائمة يظهر الاسم الذي تختاره فقط؛ لا يعرض عنوان الخادم أو المنفذ، وأزرار التعديل والمشاركة والبحث مخفية. عند التصدير إلى الحافظة يطلب التطبيق اسمًا للملف، ثم يتيح:
 
-يوفر هذا الإصدار خيارًا منفصلًا بعنوان **Shadowsocks server transport (HTTP CONNECT)**. عند تفعيله، يرسل عميل Shadowsocks طلب `CONNECT <vps-host>:<vps-port>` إلى وسيط HTTP CONNECT حقيقي، ثم ينقل تدفق Shadowsocks المشفر داخل النفق. أدخل مضيف ومنفذ الوسيط في صفحة Script relay؛ بيانات الوسيط اختيارية. هذا الخيار يغلّف اتصال العميل بخادم Shadowsocks نفسه، وليس طلبات الإنترنت التي يجلبها Apps Script. لا تفعّل سلسلة Script relay إذا كان المطلوب أن يرى `myip.com` عنوان خروج VPS.
+- **Copy without password**: ينسخ رابطًا صالحًا بصيغة `alrufaaey://...` ويضم إعداد الاتصال اللازم للاستيراد.
+- **Protect with password**: يشفّر الرابط بالكامل إلى صيغة `alrufaaey://protected/v1/...` باستخدام AES-256-GCM ومفتاح مشتق عبر PBKDF2-HMAC-SHA256 (200,000 دورة). يتطلب كلمة مرور من 8 أحرف على الأقل؛ يلزم إدخالها عند الاستيراد من الحافظة. لا يُرسل التطبيق كلمة المرور إلى أي خادم.
 
-وسيط HTTP CONNECT يجب أن يكون خدمة متاحة من الهاتف ومصرحًا لها بالاتصال بعنوان VPS ومنفذه. رابط Google Apps Script أو حقول `Deployment URL` و`auth_key` و`front_domain` لا توفر CONNECT ولا يمكن استعمالها بدل ذلك الوسيط. إذا كان المطلوب ظهور IP الـVPS في `myip.com`، أوقف **Enable Script relay chain** لأن Apps Script يجلب صفحات HTTP/HTTPS من شبكة Google، ثم فعّل HTTP CONNECT واستخدم ملف Shadowsocks. النقل الحالي TCP فقط؛ عند تفعيله يتوقف UDP وUDP fallback، كما لا تدعم هذه النسخة إضافات Shadowsocks أو CONNECT-over-TLS/WebSocket. مصادقة Basic عبر HTTP العادي غير مشفرة؛ لا تستخدم بيانات اعتماد حساسة إلا مع وسيط موثوق وشبكة مناسبة.
+إبقاء النص العادي في الحافظة يظل غير محمي؛ اختر التشفير عند مشاركة بيانات حساسة. استيراد/تصدير الملفات، وخيارات البحث والمسح/الإضافة اليدوية مخفية من واجهة المستخدم.
 
-## البناء
+## البناء والتثبيت
 
-المشروع يضم مصادر Shadowsocks Android ومصادر crate Rust الخاص بـRelayGuard. إعداد RelayGuard Rust مضاف إلى مهمة `mobile:cargoBuildRelayGuard` ويُستدعى قبل تجميع APK.
-
-المتطلبات: JDK 17 أو أحدث، Android SDK Platform 36، Build Tools 36.0.0، Android NDK 27.2.12479018 أو إصدار متوافق، Rust stable، أهداف Android الأربعة، و`cargo-ndk`.
+المشروع يضم مصادر Shadowsocks Android ومصادر محرك RelayGuard. تُبنى مكتبات RelayGuard وShadowsocks native ضمن Gradle.
 
 ```bash
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 cargo install cargo-ndk --locked
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
-./gradlew assembleDebug
+./gradlew :mobile:assembleDebug -PTARGET_ABI=arm64 -PCARGO_PROFILE=release
 ```
 
-للتجميع لمعمارية واحدة أثناء التطوير (على سبيل المثال أجهزة ARM64):
+نسخة Debug موقعة بمفتاح debug الافتراضي ومخصصة للاختبار. معرّف الحزمة مختلف عن التطبيق الرسمي، لذلك يُثبّت هذا التطبيق كحزمة مستقلة؛ لا تُنقل إعدادات أو ملفات التطبيق الرسمي تلقائيًا.
 
-```bash
-./gradlew assembleDebug -PTARGET_ABI=arm64
-```
-
-المفتاح الافتراضي الخاص بـGradle يوقّع نسخة Debug لأغراض الاختبار فقط. لا يتضمن المستودع مفتاح Release خاصًا؛ جهّز مفتاحك خارج المستودع قبل توزيع إصدار Release.
-يحافظ هذا fork على `applicationId` الأصلي لـShadowsocks؛ إذا كان التطبيق الرسمي مثبتًا بتوقيع مختلف، أزله قبل تثبيت APK التجريبي حتى لا يظهر تعارض التوقيع.
-
-## مصدر كل مشروع والترخيص
+## المصدر والتراخيص
 
 - واجهة Shadowsocks Android ومصادرها مبنية على [shadowsocks/shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)، مرخصة GPL-3.0-or-later؛ راجع [`LICENSE`](LICENSE).
 - محرك RelayGuard من [alrufaaey-yahoo/RelayGuard-Android](https://github.com/alrufaaey-yahoo/RelayGuard-Android)، وترخيصه MIT محفوظ في [`relayguard/LICENSE`](relayguard/LICENSE).
-- إشعارات واعتمادات المصادر التابعة في [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+- الإشعارات والاعتمادات التابعة موضحة في [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
-هذا fork مستقل للاختبار والتطوير وليس إصدارًا رسميًا من Shadowsocks أو RelayGuard. استخدام Apps Script وMITM يخضع لسياسات Google والقوانين المحلية؛ تحقق من إعداد النشر والشهادة قبل الاستخدام.
+هذا fork مستقل للاختبار والتطوير وليس إصدارًا رسميًا من Shadowsocks أو RelayGuard. راجع سياسات خدمات النشر والشهادات والقوانين المحلية قبل الاستخدام.

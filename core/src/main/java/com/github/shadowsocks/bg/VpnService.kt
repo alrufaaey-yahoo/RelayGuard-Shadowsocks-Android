@@ -63,8 +63,6 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         private const val PRIVATE_VLAN4_ROUTER = "172.19.0.2"
         private const val PRIVATE_VLAN6_CLIENT = "fdfe:dcba:9876::1"
         private const val PRIVATE_VLAN6_ROUTER = "fdfe:dcba:9876::2"
-        private const val RELAY_HTTP_PORT = 18080
-        private const val RELAY_SOCKS_PORT = 18081
 
         private fun <T> FileDescriptor.use(block: (FileDescriptor) -> T) = try {
             block(this)
@@ -133,11 +131,6 @@ class VpnService : BaseVpnService(), BaseService.Interface {
     override fun onRevoke() = stopRunner()
 
     override fun killProcesses(scope: CoroutineScope) {
-        if (relayHandle != 0L) {
-            val handle = relayHandle
-            relayHandle = 0L
-            scope.launch(Dispatchers.IO) { Native.stopProxy(handle) }
-        }
         super.killProcesses(scope)
         active = false
         scope.launch { DefaultNetworkListener.stop(this) }
@@ -145,6 +138,14 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         worker = null
         conn?.close()
         conn = null
+        val handle = relayHandle
+        relayHandle = 0L
+        RelayGuardRuntime.clear()
+        if (handle != 0L) scope.launch(Dispatchers.IO) {
+            // ss-local is closed first because its upstream is RelayGuard's HTTP listener.
+            delay(150)
+            Native.stopProxy(handle)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
@@ -163,9 +164,15 @@ class VpnService : BaseVpnService(), BaseService.Interface {
 
     override suspend fun startProcesses() {
         worker = ProtectWorker().apply { start() }
-        super.startProcesses()
-        if (DataStore.relayEnabled) startRelayGuard()
-        sendFd(startVpn())
+        try {
+            // The local CONNECT upstream must be listening before ss-local is launched.
+            if (DataStore.relayEnabled) startRelayGuard()
+            super.startProcesses()
+            sendFd(startVpn())
+        } catch (e: Throwable) {
+            stopRelayGuardImmediately()
+            throw e
+        }
     }
 
     override val isVpnService get() = true
@@ -187,54 +194,87 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         }
         val dataDir = File(filesDir, "relayguard").apply { mkdirs() }
         Native.setDataDir(dataDir.absolutePath)
-        val config = JSONObject().apply {
-            put("mode", "apps_script")
-            put("listen_host", "127.0.0.1")
-            put("listen_port", RELAY_HTTP_PORT)
-            put("socks5_port", RELAY_SOCKS_PORT)
-            put("script_ids", JSONArray(deployments))
-            put("auth_key", authKey)
-            put("front_domain", frontDomain)
-            put("google_ip", frontDomain)
-            put("sni_hosts", JSONArray(listOf(frontDomain)))
-            // Both RelayGuard relay requests and raw TCP streams use Shadowsocks as their only upstream.
-            put("upstream_socks5", "127.0.0.1:${DataStore.portProxy}")
-            put("verify_ssl", DataStore.relayVerifySsl)
-            put("youtube_via_relay", DataStore.relayYoutubeViaRelay)
-            put("log_level", DataStore.relayLogLevel)
-            put("parallel_relay", DataStore.relayParallel)
-            put("block_quic", DataStore.relayBlockQuic)
-            put("block_stun", DataStore.relayBlockStun)
-            put("block_doh", DataStore.relayBlockDoh)
-            put("tunnel_doh", DataStore.relayTunnelDoh)
-            put("force_http1", DataStore.relayForceHttp1)
-            put("coalesce_step_ms", DataStore.relayCoalesceStepMs)
-            put("coalesce_max_ms", DataStore.relayCoalesceMaxMs)
-        }
-        relayHandle = withContext(Dispatchers.IO) { Native.startProxy(config.toString()) }
-        if (relayHandle == 0L) throw IOException("RelayGuard failed to start; inspect Android service logs")
-        val ready = withContext(Dispatchers.IO) {
-            var attempt = 0
-            var listening = false
-            while (attempt < 60 && !listening) {
-                try {
-                    java.net.Socket().use {
-                        it.connect(java.net.InetSocketAddress("127.0.0.1", RELAY_SOCKS_PORT), 100)
-                    }
-                    listening = true
-                } catch (_: IOException) {
-                    delay(50)
-                }
-                attempt += 1
+        var lastFailure: Throwable? = null
+        repeat(5) {
+            val ports = withContext(Dispatchers.IO) {
+                val reserved = setOf(DataStore.portProxy, DataStore.portLocalDns, DataStore.portTransproxy)
+                val httpPort = findEphemeralLoopbackPort(reserved)
+                httpPort to findEphemeralLoopbackPort(reserved + httpPort)
             }
-            listening
+            val config = JSONObject().apply {
+                put("mode", "apps_script")
+                put("listen_host", "127.0.0.1")
+                put("listen_port", ports.first)
+                put("socks5_port", ports.second)
+                put("script_ids", JSONArray(deployments))
+                put("auth_key", authKey)
+                put("front_domain", frontDomain)
+                put("google_ip", frontDomain)
+                put("sni_hosts", JSONArray(listOf(frontDomain)))
+                // RelayGuard's connections go directly to its configured front. Shadowsocks
+                // itself uses this local HTTP CONNECT listener as its upstream transport.
+                put("verify_ssl", DataStore.relayVerifySsl)
+                put("youtube_via_relay", DataStore.relayYoutubeViaRelay)
+                put("log_level", DataStore.relayLogLevel)
+                put("parallel_relay", DataStore.relayParallel)
+                put("block_quic", DataStore.relayBlockQuic)
+                put("block_stun", DataStore.relayBlockStun)
+                put("block_doh", DataStore.relayBlockDoh)
+                put("tunnel_doh", DataStore.relayTunnelDoh)
+                put("force_http1", DataStore.relayForceHttp1)
+                put("coalesce_step_ms", DataStore.relayCoalesceStepMs)
+                put("coalesce_max_ms", DataStore.relayCoalesceMaxMs)
+            }
+            val handle = withContext(Dispatchers.IO) { Native.startProxy(config.toString()) }
+            if (handle == 0L) {
+                lastFailure = IOException("RelayGuard rejected its configuration")
+                return@repeat
+            }
+            val ready = withContext(Dispatchers.IO) {
+                var attempt = 0
+                var listening = false
+                while (attempt < 60 && !listening) {
+                    try {
+                        java.net.Socket().use {
+                            it.connect(java.net.InetSocketAddress("127.0.0.1", ports.first), 150)
+                        }
+                        listening = true
+                    } catch (_: IOException) {
+                        delay(50)
+                    }
+                    attempt += 1
+                }
+                listening
+            }
+            if (ready) {
+                relayHandle = handle
+                RelayGuardRuntime.publishHttpProxyPort(ports.first)
+                Timber.i("RelayGuard HTTP CONNECT ready on 127.0.0.1:${ports.first}")
+                return
+            }
+            withContext(Dispatchers.IO) { Native.stopProxy(handle) }
+            lastFailure = IOException("RelayGuard HTTP listener did not become ready")
         }
-        if (!ready) {
-            withContext(Dispatchers.IO) { Native.stopProxy(relayHandle) }
-            relayHandle = 0L
-            throw IOException("RelayGuard SOCKS listener did not become ready")
+        throw IOException("RelayGuard failed to start its local HTTP proxy", lastFailure)
+    }
+
+    private fun findEphemeralLoopbackPort(exclude: Set<Int> = emptySet()): Int {
+        repeat(32) {
+            java.net.ServerSocket().use { socket ->
+                socket.reuseAddress = false
+                socket.bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("127.0.0.1"), 0))
+                val port = socket.localPort
+                if (port !in exclude) return port
+            }
         }
-        Timber.i("RelayGuard started in chain mode: local relay -> Shadowsocks SOCKS -> VPS")
+        throw IOException("Could not allocate a local RelayGuard port")
+    }
+
+    private suspend fun stopRelayGuardImmediately() {
+        val handle = relayHandle
+        relayHandle = 0L
+        RelayGuardRuntime.clear()
+        if (handle != 0L) withContext(Dispatchers.IO) { Native.stopProxy(handle) }
     }
 
     private fun startVpn(): FileDescriptor {
@@ -291,7 +331,7 @@ class VpnService : BaseVpnService(), BaseService.Interface {
 
         val cmd = arrayListOf(File(applicationInfo.nativeLibraryDir, Executable.TUN2SOCKS).absolutePath,
                 "--netif-ipaddr", PRIVATE_VLAN4_ROUTER,
-                "--socks-server-addr", if (DataStore.relayEnabled) "127.0.0.1:$RELAY_SOCKS_PORT" else "${DataStore.listenAddress}:${DataStore.portProxy}",
+                "--socks-server-addr", "127.0.0.1:${DataStore.portProxy}",
                 "--tunmtu", VPN_MTU.toString(),
                 "--sock-path", "sock_path",
                 "--dnsgw", "127.0.0.1:${DataStore.portLocalDns}",
@@ -300,7 +340,7 @@ class VpnService : BaseVpnService(), BaseService.Interface {
             cmd += "--netif-ip6addr"
             cmd += PRIVATE_VLAN6_ROUTER
         }
-        cmd += "--enable-udprelay"
+        if (!DataStore.relayEnabled) cmd += "--enable-udprelay"
         data.processes!!.start(cmd, onRestartCallback = {
             try {
                 sendFd(conn.fileDescriptor)

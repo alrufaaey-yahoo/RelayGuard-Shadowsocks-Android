@@ -35,9 +35,6 @@
 
         <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing"
                    android:value="true" />
-        <meta-data android:name="com.google.android.backup.api_key"
-                   android:value="AEdPqrEAAAAI_zVxZthz2HDuz9toTvkYvL0L5GA-OjeUIfBeXg"/>
-
         <service
             android:name="com.github.shadowsocks.bg.VpnService"
             android:process=":bg"
@@ -82,15 +79,8 @@
         <activity
             android:name="com.github.shadowsocks.UrlImportActivity"
             android:theme="@style/Theme.Shadowsocks.Translucent"
-            android:exported="true"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="ss"/>
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:excludeFromRecents="true" />
 
         <activity
             android:name="com.github.shadowsocks.VpnRequestActivity"
@@ -115,10 +105,6 @@
                   android:theme="@style/Theme.Shadowsocks.ActionBar"/>
         <activity android:name="com.google.android.gms.oss.licenses.OssLicensesMenuActivity"
                   android:theme="@style/Theme.Shadowsocks.ActionBar"/>
-        <service android:name="com.google.firebase.components.ComponentDiscoveryService"
-                 android:directBootAware="true"/>
-        <provider android:name="com.google.firebase.provider.FirebaseInitProvider"
-                  tools:node="remove"/>
         <service android:name="androidx.room.MultiInstanceInvalidationService"
                  android:process=":bg"/>
     </application>

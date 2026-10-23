@@ -29,7 +29,6 @@ import android.os.IBinder
 import android.os.RemoteCallbackList
 import android.os.RemoteException
 import androidx.core.content.ContextCompat
-import androidx.core.os.bundleOf
 import com.github.shadowsocks.BootReceiver
 import com.github.shadowsocks.Core
 import com.github.shadowsocks.Core.app
@@ -43,7 +42,6 @@ import com.github.shadowsocks.preference.DataStore
 import com.github.shadowsocks.utils.Action
 import com.github.shadowsocks.utils.broadcastReceiver
 import com.github.shadowsocks.utils.readableMessage
-import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -247,8 +245,8 @@ object BaseService {
             data.proxy!!.start(this,
                     File(Core.deviceStorage.noBackupFilesDir, "stat_main"),
                     File(configRoot, CONFIG_FILE),
-                    if (DataStore.httpConnectEnabled || udpFallback != null || data.proxy?.plugin != null) "tcp_only" else "tcp_and_udp")
-            if (!DataStore.httpConnectEnabled) {
+                    if (DataStore.relayEnabled || udpFallback != null || data.proxy?.plugin != null) "tcp_only" else "tcp_and_udp")
+            if (!DataStore.relayEnabled) {
                 if (udpFallback?.plugin != null) throw ExpectedExceptionWrapper(IllegalStateException(
                         "UDP fallback cannot have plugins"))
                 udpFallback?.start(this,
@@ -256,7 +254,7 @@ object BaseService {
                         File(configRoot, CONFIG_FILE_UDP),
                         "udp_only", false)
             } else if (udpFallback != null) {
-                Timber.i("UDP fallback disabled while HTTP CONNECT transport is active")
+                Timber.i("UDP fallback disabled while RelayGuard HTTP CONNECT transport is active")
             }
             data.localDns = LocalDnsWorker(this::rawResolver).apply { start() }
         }
@@ -281,8 +279,6 @@ object BaseService {
             // channge the state
             data.changeState(State.Stopping)
             GlobalScope.launch(Dispatchers.Main.immediate) {
-                FirebaseAnalytics.getInstance(this@Interface as Service).logEvent("stop",
-                    bundleOf(FirebaseAnalytics.Param.METHOD to tag))
                 data.connectingJob?.cancelAndJoin() // ensure stop connecting first
                 this@Interface as Service
                 // we use a coroutineScope here to allow clean-up in parallel
@@ -357,9 +353,6 @@ object BaseService {
             }
 
             data.notification = createNotification(profile.formattedName)
-            FirebaseAnalytics.getInstance(this).logEvent("start",
-                bundleOf(FirebaseAnalytics.Param.METHOD to tag))
-
             data.changeState(State.Connecting)
             data.connectingJob = GlobalScope.launch(Dispatchers.Main.immediate) {
                 try {

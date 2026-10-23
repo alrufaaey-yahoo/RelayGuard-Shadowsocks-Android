@@ -110,6 +110,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         set(value) = privateStore.putBoolean(Key.dirty, value)
 
     val relayEnabled get() = privateStore.getBoolean(Key.relayEnabled) ?: false
+    val relayConfigUrl get() = privateStore.getString(Key.relayConfigUrl)?.trim().orEmpty()
     val relayDeploymentUrls get() = privateStore.getString(Key.relayDeploymentUrls) ?: ""
     val relayAuthKey get() = privateStore.getString(Key.relayAuthKey) ?: ""
     val relayFrontDomain get() = privateStore.getString(Key.relayFrontDomain) ?: "www.google.com"
@@ -124,9 +125,4 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     val relayForceHttp1 get() = privateStore.getBoolean(Key.relayForceHttp1) ?: false
     val relayCoalesceStepMs get() = privateStore.getString(Key.relayCoalesceStepMs)?.toIntOrNull()?.coerceIn(0, 500) ?: 10
     val relayCoalesceMaxMs get() = privateStore.getString(Key.relayCoalesceMaxMs)?.toIntOrNull()?.coerceIn(0, 2000) ?: 1000
-    val httpConnectEnabled get() = privateStore.getBoolean(Key.httpConnectEnabled) ?: false
-    val httpConnectServer get() = privateStore.getString(Key.httpConnectServer)?.trim().orEmpty()
-    val httpConnectPort get() = privateStore.getString(Key.httpConnectPort)?.toIntOrNull() ?: 8080
-    val httpConnectUsername get() = privateStore.getString(Key.httpConnectUsername)?.trim().orEmpty()
-    val httpConnectPassword get() = privateStore.getString(Key.httpConnectPassword).orEmpty()
 }

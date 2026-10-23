@@ -103,8 +103,6 @@ dependencies {
     api(libs.androidx.work.multiprocess)
     api(libs.androidx.work.runtime.ktx)
     api(libs.dnsjava)
-    api(libs.firebase.analytics)
-    api(libs.firebase.crashlytics)
     api(libs.kotlinx.coroutines.android)
     api(libs.kotlinx.coroutines.play.services)
     api(libs.material)

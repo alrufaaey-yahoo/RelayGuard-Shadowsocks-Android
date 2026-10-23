@@ -26,22 +26,25 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.text.format.Formatter
 import android.util.LongSparseArray
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
 import com.github.shadowsocks.aidl.TrafficStats
 import com.github.shadowsocks.bg.BaseService
@@ -61,10 +64,13 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.WriterException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.nio.charset.StandardCharsets
 
-class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener {
+class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener {
     companion object {
         /**
          * used for callback from stateChanged from MainActivity
@@ -127,25 +133,11 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
         private val subscription = itemView.findViewById<View>(R.id.subscription)
 
         init {
-            edit.setOnClickListener {
-                item = ProfileManager.getProfile(item.id)!!
-                startConfig(item)
-            }
-            subscription.setOnClickListener {
-                item = ProfileManager.getProfile(item.id) ?: return@setOnClickListener
-                startConfig(item)
-            }
-            TooltipCompat.setTooltipText(edit, edit.contentDescription)
-            TooltipCompat.setTooltipText(subscription, subscription.contentDescription)
+            edit.visibility = View.GONE
+            subscription.visibility = View.GONE
             itemView.setOnClickListener(this)
             val share = itemView.findViewById<View>(R.id.share)
-            share.setOnClickListener {
-                val popup = PopupMenu(requireContext(), share)
-                popup.menuInflater.inflate(R.menu.profile_share_popup, popup.menu)
-                popup.setOnMenuItemClickListener(this)
-                popup.show()
-            }
-            TooltipCompat.setTooltipText(share, share.contentDescription)
+            share.visibility = View.GONE
         }
 
         fun bind(item: Profile) {
@@ -161,12 +153,8 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
                 tx += txTotal
                 rx += rxTotal
             }
-            text1.text = item.formattedName
-            text2.text = ArrayList<String>().apply {
-                if (!item.name.isNullOrEmpty()) this += item.formattedAddress
-                val id = PluginConfiguration(item.plugin ?: "").selected
-                if (id.isNotEmpty()) this += getString(R.string.profile_plugin, id)
-            }.joinToString("\n")
+            text1.text = item.name?.takeIf(String::isNotBlank) ?: getString(R.string.profile_unlabelled)
+            text2.text = null
             val context = requireContext()
             traffic.text = if (tx <= 0 && rx <= 0) null else getString(R.string.traffic,
                     Formatter.formatFileSize(context, tx), Formatter.formatFileSize(context, rx))
@@ -179,13 +167,6 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
                 if (selectedItem === this) selectedItem = null
             }
 
-            if (item.subscription == Profile.SubscriptionStatus.Active) {
-                edit.visibility = View.GONE
-                subscription.visibility = View.VISIBLE
-            } else {
-                edit.visibility = View.VISIBLE
-                subscription.visibility = View.GONE
-            }
         }
 
         override fun onClick(v: View?) {
@@ -323,6 +304,7 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
 
     val profilesAdapter by lazy { ProfilesAdapter() }
     private lateinit var profilesList: RecyclerView
+    private lateinit var emptyState: View
     private val layoutManager by lazy { LinearLayoutManager(context, RecyclerView.VERTICAL, false) }
     private lateinit var undoManager: UndoSnackbarManager<Profile>
     private val statsCache = LongSparseArray<TrafficStats>()
@@ -331,13 +313,6 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
         profile.serialize()
         startActivity(Intent(context, ProfileConfigActivity::class.java).putExtra(Action.EXTRA_PROFILE_ID, profile.id))
     }
-
-    override fun onQueryTextChange(query: String): Boolean {
-        profilesAdapter.filter(query)
-        return false
-    }
-
-    override fun onQueryTextSubmit(query: String): Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? =
             inflater.inflate(R.layout.layout_list, container, false)
@@ -348,20 +323,24 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
         toolbar.setTitle(R.string.profiles)
         toolbar.inflateMenu(R.menu.profile_manager_menu)
         toolbar.setOnMenuItemClickListener(this)
-        val searchView = toolbar.findViewById<SearchView>(R.id.action_search)
-        searchView.setOnQueryTextListener(this)
-        searchView.queryHint = getString(android.R.string.search_go)
 
-        ProfileManager.ensureNotEmpty()
         profilesList = view.findViewById(R.id.list)
+        emptyState = view.findViewById(R.id.empty_state)
         ViewCompat.setOnApplyWindowInsetsListener(profilesList, MainListListener)
         profilesList.layoutManager = layoutManager
         profilesList.addItemDecoration(DividerItemDecoration(context, layoutManager.orientation))
-        layoutManager.scrollToPosition(profilesAdapter.profiles.indexOfFirst { it.id == DataStore.profileId })
+        profilesAdapter.profiles.indexOfFirst { it.id == DataStore.profileId }
+            .takeIf { it >= 0 }?.let(layoutManager::scrollToPosition)
         val animator = DefaultItemAnimator()
         animator.supportsChangeAnimations = false // prevent fading-in/out when rebinding
         profilesList.itemAnimator = animator
         profilesList.adapter = profilesAdapter
+        profilesAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() = updateEmptyState()
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = updateEmptyState()
+            override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = updateEmptyState()
+        })
+        updateEmptyState()
         instance = this
         ProfileManager.listener = profilesAdapter
         undoManager = UndoSnackbarManager(activity as MainActivity, profilesAdapter::undo, profilesAdapter::commit)
@@ -394,6 +373,133 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
         }).attachToRecyclerView(profilesList)
     }
 
+    private fun updateEmptyState() {
+        if (this::emptyState.isInitialized) {
+            emptyState.visibility = if (profilesAdapter.itemCount == 0) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun importFromClipboard() {
+        val payload = try { Core.clipboard.primaryClip?.getItemAt(0)?.coerceToText(requireContext())?.toString().orEmpty() }
+        catch (_: Exception) { "" }
+        if (payload.isBlank()) {
+            showImportError()
+        } else if (ProfileClipboardCodec.isProtected(payload)) {
+            val password = EditText(requireContext()).apply {
+                hint = getString(R.string.profile_password)
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                setSingleLine(true)
+            }
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.import_protected_profile)
+                .setView(password)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    val secret = password.text.toString()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val decoded = runCatching {
+                            withContext(Dispatchers.IO) { ProfileClipboardCodec.unprotect(payload, secret) }
+                        }
+                        decoded.onSuccess(::importPlainProfiles).onFailure { showImportError() }
+                    }
+                }.show()
+        } else importPlainProfiles(payload)
+    }
+
+    private fun importPlainProfiles(payload: String) {
+        val parsed = try {
+            Profile.findAllUrls(payload, Core.currentProfile?.main).toList()
+        } catch (_: Exception) { emptyList() }
+        if (parsed.isEmpty()) {
+            showImportError()
+            return
+        }
+        val needsSelection = Core.currentProfile == null
+        parsed.forEachIndexed { index, profile ->
+            if (profile.name.isNullOrBlank()) profile.name = getString(R.string.profile_imported_name, index + 1)
+            val created = ProfileManager.createProfile(profile)
+            if (needsSelection && index == 0) DataStore.profileId = created.id
+        }
+        (activity as MainActivity).snackbar().setText(R.string.action_import_msg).show()
+    }
+
+    private fun showImportError() {
+        (activity as? MainActivity)?.snackbar()?.setText(R.string.action_import_err)?.show()
+    }
+
+    private fun showExportDialog() {
+        val profile = Core.currentProfile?.main
+        if (profile == null) {
+            (activity as MainActivity).snackbar().setText(R.string.profiles_required).show()
+            return
+        }
+        val name = EditText(requireContext()).apply {
+            hint = getString(R.string.profile_export_name)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+            setText(profile.name?.takeIf(String::isNotBlank) ?: getString(R.string.profile_imported_name, 1))
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.export_profile_title)
+            .setMessage(R.string.export_profile_message)
+            .setView(name)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.export_without_password) { _, _ ->
+                val result = ProfileClipboardCodec.exportPlain(profile, name.text.toString())
+                val copied = Core.trySetPrimaryClip(result, true)
+                (activity as MainActivity).snackbar().setText(
+                    if (copied) R.string.action_export_msg else R.string.action_export_err).show()
+            }
+            .setNeutralButton(R.string.export_with_password) { _, _ ->
+                askExportPassword(profile, name.text.toString())
+            }
+            .show()
+    }
+
+    private fun askExportPassword(profile: Profile, displayName: String) {
+        val password = EditText(requireContext()).apply {
+            hint = getString(R.string.profile_password)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
+        }
+        val confirm = EditText(requireContext()).apply {
+            hint = getString(R.string.profile_password_confirm)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
+        }
+        val fields = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = (24 * resources.displayMetrics.density).toInt()
+            setPadding(padding, 0, padding, 0)
+            addView(password)
+            addView(confirm)
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.export_with_password)
+            .setMessage(R.string.profile_password_hint)
+            .setView(fields)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.action_export) { _, _ ->
+                val secret = password.text.toString()
+                if (secret.length < 8 || secret != confirm.text.toString()) {
+                    (activity as MainActivity).snackbar().setText(
+                        if (secret.length < 8) R.string.profile_password_too_short else R.string.profile_password_mismatch).show()
+                    return@setPositiveButton
+                }
+                val plain = ProfileClipboardCodec.exportPlain(profile, displayName)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val result = runCatching { withContext(Dispatchers.IO) { ProfileClipboardCodec.protect(plain, secret) } }
+                    result.onSuccess { protected ->
+                        val copied = Core.trySetPrimaryClip(protected, true)
+                        (activity as MainActivity).snackbar().setText(
+                            if (copied) R.string.action_export_msg else R.string.action_export_err).show()
+                    }.onFailure {
+                        (activity as MainActivity).snackbar().setText(R.string.action_export_err).show()
+                    }
+                }
+            }.show()
+    }
+
     override fun onMenuItemClick(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_scan_qr_code -> {
@@ -401,20 +507,7 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
                 true
             }
             R.id.action_import_clipboard -> {
-                try {
-                    val profiles = Profile.findAllUrls(
-                            Core.clipboard.primaryClip!!.getItemAt(0).text,
-                            Core.currentProfile?.main
-                    ).toList()
-                    if (profiles.isNotEmpty()) {
-                        profiles.forEach { ProfileManager.createProfile(it) }
-                        (activity as MainActivity).snackbar().setText(R.string.action_import_msg).show()
-                        return true
-                    }
-                } catch (exc: Exception) {
-                    Timber.d(exc)
-                }
-                (activity as MainActivity).snackbar().setText(R.string.action_import_err).show()
+                importFromClipboard()
                 true
             }
             R.id.action_import_file -> {
@@ -431,10 +524,7 @@ class ProfilesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, Sea
                 true
             }
             R.id.action_export_clipboard -> {
-                val profiles = ProfileManager.getActiveProfiles()
-                val success = profiles != null && Core.trySetPrimaryClip(profiles.joinToString("\n"), true)
-                (activity as MainActivity).snackbar().setText(
-                        if (success) R.string.action_export_msg else R.string.action_export_err).show()
+                showExportDialog()
                 true
             }
             R.id.action_export_file -> {

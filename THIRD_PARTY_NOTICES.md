@@ -13,7 +13,7 @@ This application combines upstream Shadowsocks Android with the RelayGuard Rust 
 - Source: https://github.com/alrufaaey-yahoo/RelayGuard-Android
 - Rust crate source and Apps Script assets are included under [`relayguard/`](relayguard/).
 - License: MIT (see [`relayguard/LICENSE`](relayguard/LICENSE)).
-- This fork modifies the Android integration and routes RelayGuard's outbound TLS/raw TCP streams through the local Shadowsocks SOCKS endpoint. The RelayGuard upstream code is not represented as an official release.
+- This fork modifies the Android integration: the VPN sends application traffic to Shadowsocks, and the Shadowsocks TCP connection to its VPS uses RelayGuard's local HTTP CONNECT listener as upstream transport. The RelayGuard listener binds to loopback on a runtime-selected port. The RelayGuard upstream code is not represented as an official release.
 
 ## Dependency licensing
 

@@ -53,7 +53,6 @@ import com.github.shadowsocks.widget.ServiceButton
 import com.github.shadowsocks.widget.StatsBar
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.analytics.FirebaseAnalytics
 
 class MainActivity : AppCompatActivity(), ShadowsocksConnection.Callback, OnPreferenceDataStoreChangeListener,
         NavigationView.OnNavigationItemSelectedListener {
@@ -114,7 +113,17 @@ class MainActivity : AppCompatActivity(), ShadowsocksConnection.Callback, OnPref
         stateListener?.invoke(state)
     }
 
-    private fun toggle() = if (state.canStop) Core.stopService() else connect.launch(null)
+    private fun toggle() {
+        if (state.canStop) {
+            Core.stopService()
+            return
+        }
+        if (Core.currentProfile == null) {
+            snackbar(getString(R.string.profiles_required)).show()
+            return
+        }
+        connect.launch(null)
+    }
 
     private val connection = ShadowsocksConnection(true)
     override fun onServiceConnected(service: IShadowsocksService) = changeState(try {
@@ -202,7 +211,6 @@ class MainActivity : AppCompatActivity(), ShadowsocksConnection.Callback, OnPref
                 }
                 R.id.globalSettings -> displayFragment(GlobalSettingsFragment())
                 R.id.about -> {
-                    FirebaseAnalytics.getInstance(this).logEvent("about", null)
                     displayFragment(AboutFragment())
                 }
                 R.id.faq -> {

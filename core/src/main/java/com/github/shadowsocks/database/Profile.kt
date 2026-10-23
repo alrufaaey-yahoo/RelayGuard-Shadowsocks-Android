@@ -57,9 +57,9 @@ data class Profile(
         // user configurable fields
         var name: String? = "",
 
-        var host: String = "example.shadowsocks.org",
+        var host: String = "",
         var remotePort: Int = 8388,
-        var password: String = "u1rRWTssNv0p",
+        var password: String = "",
         var method: String = "aes-256-cfb",
 
         var route: String = "all",
@@ -105,7 +105,7 @@ data class Profile(
     companion object {
         private const val serialVersionUID = 1L
         private val pattern =
-                """(?i)ss://[-a-zA-Z0-9+&@#/%?=.~*'()|!:,;_\[\]]*[-a-zA-Z0-9+&@#/%=.~*'()|\[\]]""".toRegex()
+                """(?i)(?:alrufaaey|ss)://[-a-zA-Z0-9+&@#/%?=.~*'()|!:,;_\[\]]*[-a-zA-Z0-9+&@#/%=.~*'()|\[\]]""".toRegex()
         private val userInfoPattern = "^(.+?):(.*)$".toRegex()
         private val legacyPattern = "^(.+?):(.*)@(.+?):(\\d+?)$".toRegex()
 
@@ -289,7 +289,7 @@ data class Profile(
                 Base64.NO_PADDING or Base64.NO_WRAP or Base64.URL_SAFE)
         val wrappedHost = if (host.contains(':')) "[$host]" else host
         val builder = Uri.Builder()
-                .scheme("ss")
+                .scheme("alrufaaey")
                 .encodedAuthority("$auth@$wrappedHost:$remotePort")
         val configuration = PluginConfiguration(plugin ?: "")
         if (configuration.selected.isNotEmpty()) {

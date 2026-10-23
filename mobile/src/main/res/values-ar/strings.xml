@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">GCP SHADOW</string>
     <string name="relay_settings_entry">ترحيل Script</string>
-    <string name="relay_settings_summary">وضع RelayGuard أمام Shadowsocks عند تشغيل وضع VPN</string>
+    <string name="relay_settings_summary">يشغّل RelayGuard أولًا ثم يتصل Shadowsocks عبر وكيله المحلي</string>
     <string name="relay_settings_title">ترحيل Script</string>
     <string name="relay_enabled">تفعيل سلسلة Script relay</string>
-    <string name="relay_enabled_summary">يمرر RelayGuard طلبات HTTP/HTTPS المدعومة إلى Apps Script (الخروج من Google)، وينقل Shadowsocks الاتصال إلى السكربت. وضع VPN فقط.</string>
+    <string name="relay_enabled_summary">يشغّل RelayGuard على منفذ HTTP محلي عشوائي قبل Shadowsocks، ثم يتصل Shadowsocks بخادم VPS عبر HTTP CONNECT. TCP فقط؛ يُعطّل UDP.</string>
+    <string name="relay_remote_config_url">رابط ملف الإعداد النصي</string>
+    <string name="relay_remote_config_url_summary">رابط HTTPS لملف نصي يحتوي URL= وKEY= وFRONT=</string>
+    <string name="relay_refresh_config">تحديث إعدادات RelayGuard</string>
+    <string name="relay_refresh_config_summary">تنزيل URL وKEY وFRONT والتحقق منها من ملف HTTPS المحدد</string>
+    <string name="relay_remote_config_missing">أدخل رابط HTTPS لملف الإعداد النصي أولًا.</string>
+    <string name="relay_remote_config_loaded">تم تحميل إعداد RelayGuard (المفتاح مخفي)</string>
+    <string name="relay_fetch_success">تم تحديث إعدادات RelayGuard.</string>
+    <string name="relay_fetch_failed">تعذّر تنزيل ملف إعداد HTTPS أو التحقق من محتواه.</string>
+    <string name="relay_stop_before_change">افصل الاتصال قبل تعديل إعدادات Script relay.</string>
     <string name="relay_deployment_url">رابط/روابط Deployment</string>
     <string name="relay_deployment_summary">الصق رابط Apps Script المنتهي بـ /exec أو معرّف النشر. افصل بين عدة قيم بمسافة أو فاصلة أو فاصلة منقوطة</string>
     <string name="relay_auth_key">auth_key</string>
@@ -41,8 +51,23 @@
     <string name="relay_force_http1">فرض HTTP/1.1 (تعطيل HTTP/2)</string>
     <string name="relay_coalesce_step">خطوة تجميع الدفعة (مللي ثانية)</string>
     <string name="relay_coalesce_max">أقصى انتظار للدفعة (مللي ثانية)</string>
-    <string name="relay_missing_credentials">أدخل رابط Deployment وauth_key قبل تفعيل Script relay.</string>
+    <string name="relay_missing_credentials">حدّث إعدادًا صالحًا يحتوي URL وKEY وFRONT قبل تفعيل Script relay.</string>
     <string name="relay_vpn_mode_only">يتطلب Script relay ضبط وضع خدمة Shadowsocks على VPN.</string>
+    <string name="profile_unlabelled">خادم</string>
+    <string name="profile_imported_name">خادم %1$d</string>
+    <string name="profiles_empty">لا توجد ملفات خوادم بعد. افتح قائمة الإضافة واختر «استيراد من الحافظة» لإضافة رابط alrufaaey://.</string>
+    <string name="profiles_required">استورد إعداد خادم من الحافظة قبل الاتصال.</string>
+    <string name="export_profile_title">تصدير إعداد</string>
+    <string name="export_profile_message">اختر اسمًا لعرضه. لن يظهر عنوان الخادم في قائمة الملفات داخل التطبيق.</string>
+    <string name="profile_export_name">الاسم المعروض</string>
+    <string name="export_without_password">نسخ دون كلمة مرور</string>
+    <string name="export_with_password">حماية بكلمة مرور</string>
+    <string name="import_protected_profile">أدخل كلمة مرور التصدير</string>
+    <string name="profile_password">كلمة المرور</string>
+    <string name="profile_password_confirm">تأكيد كلمة المرور</string>
+    <string name="profile_password_hint">استخدم 8 أحرف على الأقل. تُشفّر بيانات الحافظة بخوارزمية AES-GCM.</string>
+    <string name="profile_password_too_short">استخدم كلمة مرور لا تقل عن 8 أحرف.</string>
+    <string name="profile_password_mismatch">كلمتا المرور غير متطابقتين.</string>
     <string-array name="relay_log_levels"><item>تتبّع</item><item>تصحيح</item><item>معلومات</item><item>تحذير</item><item>خطأ</item><item>إيقاف</item></string-array>
     <string-array name="relay_log_level_values"><item>trace</item><item>debug</item><item>info</item><item>warn</item><item>error</item><item>off</item></string-array>
     <string-array name="relay_parallel_entries"><item>إيقاف</item><item>2</item><item>3</item><item>4</item><item>5</item></string-array>

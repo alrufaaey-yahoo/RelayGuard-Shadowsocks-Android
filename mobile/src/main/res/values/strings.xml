@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">GCP SHADOW</string>
     <string name="relay_settings_entry">Script relay</string>
-    <string name="relay_settings_summary">Place RelayGuard in front of Shadowsocks when VPN mode is active</string>
+    <string name="relay_settings_summary">Start RelayGuard first, then connect Shadowsocks through its local HTTP proxy</string>
     <string name="relay_settings_title">Script relay</string>
     <string name="relay_enabled">Enable Script relay chain</string>
-    <string name="relay_enabled_summary">RelayGuard sends supported HTTP/HTTPS requests to Apps Script (Google egress); Shadowsocks carries the connection to the script. VPN mode only.</string>
+    <string name="relay_enabled_summary">Start RelayGuard on a random loopback HTTP port before Shadowsocks; connect to the VPS through RelayGuard using HTTP CONNECT. TCP only; UDP is disabled.</string>
+    <string name="relay_remote_config_url">Remote text config URL</string>
+    <string name="relay_remote_config_url_summary">HTTPS link to a text file containing URL=, KEY= and FRONT= values</string>
+    <string name="relay_refresh_config">Refresh RelayGuard settings</string>
+    <string name="relay_refresh_config_summary">Download and validate URL, KEY and FRONT from the configured HTTPS text file</string>
+    <string name="relay_remote_config_missing">Enter the HTTPS text configuration URL first.</string>
+    <string name="relay_remote_config_loaded">RelayGuard configuration loaded (secret hidden)</string>
+    <string name="relay_fetch_success">RelayGuard settings updated.</string>
+    <string name="relay_fetch_failed">Could not download or validate the HTTPS text configuration.</string>
+    <string name="relay_stop_before_change">Disconnect before changing Script relay settings.</string>
     <string name="relay_deployment_url">Deployment URL(s)</string>
     <string name="relay_deployment_summary">Paste one or more Apps Script /exec URLs or deployment IDs, separated by spaces, commas, or semicolons</string>
     <string name="relay_auth_key">auth_key</string>
@@ -41,8 +51,23 @@
     <string name="relay_force_http1">Force HTTP/1.1 (disable HTTP/2)</string>
     <string name="relay_coalesce_step">Batch coalesce step (ms)</string>
     <string name="relay_coalesce_max">Maximum batch wait (ms)</string>
-    <string name="relay_missing_credentials">Enter a Deployment URL and auth_key before enabling Script relay.</string>
+    <string name="relay_missing_credentials">Refresh a valid URL, KEY and FRONT config before enabling Script relay.</string>
     <string name="relay_vpn_mode_only">Script relay requires Shadowsocks Service mode = VPN.</string>
+    <string name="profile_unlabelled">Unnamed server</string>
+    <string name="profile_imported_name">Server %1$d</string>
+    <string name="profiles_empty">No server profiles yet. Open the add menu and choose Import from Clipboard to add an alrufaaey:// profile.</string>
+    <string name="profiles_required">Import a server profile from the clipboard before connecting.</string>
+    <string name="export_profile_title">Export profile</string>
+    <string name="export_profile_message">Choose a display name. The server address is not shown in the app’s profile list.</string>
+    <string name="profile_export_name">Display name</string>
+    <string name="export_without_password">Copy without password</string>
+    <string name="export_with_password">Protect with password</string>
+    <string name="import_protected_profile">Enter export password</string>
+    <string name="profile_password">Password</string>
+    <string name="profile_password_confirm">Confirm password</string>
+    <string name="profile_password_hint">Use at least 8 characters. The clipboard payload is encrypted with AES-GCM.</string>
+    <string name="profile_password_too_short">Use a password with at least 8 characters.</string>
+    <string name="profile_password_mismatch">The passwords do not match.</string>
     <string-array name="relay_log_levels">
         <item>Trace</item><item>Debug</item><item>Info</item><item>Warn</item><item>Error</item><item>Off</item>
     </string-array>

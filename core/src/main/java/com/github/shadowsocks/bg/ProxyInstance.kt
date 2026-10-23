@@ -78,26 +78,19 @@ class ProxyInstance(val profile: Profile, private val route: String = profile.ro
         // init JSON config
         this.configFile = configFile
         val config = profile.toJson()
-        if (DataStore.httpConnectEnabled && mode != "udp_only") {
+        if (DataStore.relayEnabled && mode != "udp_only") {
             if (!profile.plugin.isNullOrBlank()) {
                 throw BaseService.ExpectedExceptionWrapper(
                     IllegalArgumentException(app.getString(R.string.core_http_connect_plugin_unsupported)))
             }
-            val proxyHost = DataStore.httpConnectServer
-            val proxyPort = DataStore.httpConnectPort
-            if (proxyHost.isBlank() || proxyPort !in 1..65535) {
+            val proxyPort = RelayGuardRuntime.httpProxyPort
+            if (proxyPort !in 1..65535) {
                 throw BaseService.ExpectedExceptionWrapper(
                     IllegalArgumentException(app.getString(R.string.core_http_connect_missing_proxy)))
             }
             config.put("http_connect_proxy", JSONObject().apply {
-                put("server", proxyHost)
+                put("server", "127.0.0.1")
                 put("server_port", proxyPort)
-                val username = DataStore.httpConnectUsername
-                val password = DataStore.httpConnectPassword
-                if (username.isNotBlank() && password.isNotBlank()) {
-                    put("username", username)
-                    put("password", password)
-                }
             })
         }
         plugin?.let { (path, opts, isV2) ->

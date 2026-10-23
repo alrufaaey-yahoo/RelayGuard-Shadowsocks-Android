@@ -6,12 +6,28 @@
               android:orientation="vertical"
               android:fitsSystemWindows="true">
     <include layout="@layout/toolbar_light_dark"/>
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/list"
-                                            tools:listitem="@layout/layout_profile"
-                                            android:layout_width="match_parent"
-                                            android:layout_height="0dp"
-                                            android:layout_weight="1"
-                                            android:scrollbars="vertical"
-                                            android:clipChildren="false"
-                                            android:clipToPadding="false"/>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            tools:listitem="@layout/layout_profile"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false" />
+        <TextView
+            android:id="@+id/empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="32dp"
+            android:text="@string/profiles_empty"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="?android:attr/textColorSecondary"
+            android:visibility="gone" />
+    </FrameLayout>
 </LinearLayout>

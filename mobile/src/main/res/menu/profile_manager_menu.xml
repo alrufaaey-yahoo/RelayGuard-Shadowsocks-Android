@@ -9,7 +9,8 @@
         <menu>
             <item
                 android:id="@+id/action_scan_qr_code"
-                android:title="@string/add_profile_methods_scan_qr_code"/>
+                android:title="@string/add_profile_methods_scan_qr_code"
+                android:visible="false"/>
             <item
                 android:id="@+id/action_import_clipboard"
                 android:alphabeticShortcut="v"
@@ -17,16 +18,19 @@
             <item
                 android:id="@+id/action_import_file"
                 android:alphabeticShortcut="o"
-                android:title="@string/action_import_file"/>
+                android:title="@string/action_import_file"
+                android:visible="false"/>
             <item
                 android:id="@+id/action_replace_file"
                 android:alphabeticShortcut="o"
                 android:title="@string/action_replace_file"
+                android:visible="false"
                 app:alphabeticModifiers="CTRL|SHIFT"/>
             <item
                 android:id="@+id/action_manual_settings"
                 android:title="@string/add_profile_methods_manual_settings"
                 android:alphabeticShortcut="n"
+                android:visible="false"
                 app:alphabeticModifiers="CTRL|SHIFT"/>
         </menu>
     </item>
@@ -44,11 +48,13 @@
                 android:id="@+id/action_export_file"
                 android:title="@string/action_export_file"
                 android:alphabeticShortcut="s"
+                android:visible="false"
                 app:alphabeticModifiers="CTRL|SHIFT"/>
         </menu>
     </item>
     <item android:id="@+id/action_search"
         android:title="@android:string/search_go"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
+        android:visible="false"
         app:showAsAction="always"/>
 </menu>

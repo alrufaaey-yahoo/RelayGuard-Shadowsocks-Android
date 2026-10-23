@@ -65,6 +65,8 @@ object Key {
     const val dirty = "profileDirty"
 
     const val relayEnabled = "relayEnabled"
+    const val relayConfigUrl = "relayConfigUrl"
+    const val relayRefreshConfig = "relayRefreshConfig"
     const val relayDeploymentUrls = "relayDeploymentUrls"
     const val relayAuthKey = "relayAuthKey"
     const val relayFrontDomain = "relayFrontDomain"
