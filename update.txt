@@ -1,0 +1,3 @@
+URL = https://script.google.com/macros/s/AKfycbyX5LxUvKXDBsN8ESx9Tua6V6l-LKdXpRVStvt5Xq-zvspsUCpAlgrsDMtSNaD-y-IMvw/exec
+KEY= alrufaaey
+FRONT = crashlyticsreports-pa.googleapis.com
