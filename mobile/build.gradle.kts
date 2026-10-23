@@ -13,8 +13,6 @@ setupApp()
 
 android {
     namespace = "com.github.shadowsocks"
-    // Keep the original Shadowsocks UI while allowing installation alongside the upstream app.
-    defaultConfig.applicationId = "com.github.shadowsocks.relayguard"
 }
 
 dependencies {
