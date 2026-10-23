@@ -212,6 +212,20 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         }
         relayHandle = Native.startProxy(config.toString())
         if (relayHandle == 0L) throw IOException("RelayGuard failed to start; inspect Android service logs")
+        val ready = (0 until 60).any {
+            try {
+                java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", RELAY_SOCKS_PORT), 100) }
+                true
+            } catch (_: IOException) {
+                Thread.sleep(50)
+                false
+            }
+        }
+        if (!ready) {
+            Native.stopProxy(relayHandle)
+            relayHandle = 0L
+            throw IOException("RelayGuard SOCKS listener did not become ready")
+        }
         Timber.i("RelayGuard started in chain mode: local relay -> Shadowsocks SOCKS -> VPS")
     }
 
