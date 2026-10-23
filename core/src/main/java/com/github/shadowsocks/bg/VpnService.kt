@@ -61,6 +61,8 @@ class VpnService : BaseVpnService(), BaseService.Interface {
         private const val PRIVATE_VLAN4_ROUTER = "172.19.0.2"
         private const val PRIVATE_VLAN6_CLIENT = "fdfe:dcba:9876::1"
         private const val PRIVATE_VLAN6_ROUTER = "fdfe:dcba:9876::2"
+        private const val RELAY_HTTP_PORT = 18080
+        private const val RELAY_SOCKS_PORT = 18081
 
         private fun <T> FileDescriptor.use(block: (FileDescriptor) -> T) = try {
             block(this)
@@ -106,10 +108,6 @@ class VpnService : BaseVpnService(), BaseService.Interface {
     override fun createNotification(profileName: String): ServiceNotification =
             ServiceNotification(this, profileName, "service-vpn")
 
-    companion object RelayChain {
-        private const val RELAY_HTTP_PORT = 18080
-        private const val RELAY_SOCKS_PORT = 18081
-    }
     private var relayHandle: Long = 0
     private var conn: ParcelFileDescriptor? = null
     private var worker: ProtectWorker? = null

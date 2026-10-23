@@ -23,6 +23,7 @@ package com.github.shadowsocks
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
@@ -64,8 +65,13 @@ class GlobalSettingsPreferenceFragment : PreferenceFragmentCompat() {
         val portTransproxy = findPreference<EditTextPreference>(Key.portTransproxy)!!
         portTransproxy.setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
         val onServiceModeChange = Preference.OnPreferenceChangeListener { _, newValue ->
-            portTransproxy.isEnabled = newValue as String? == Key.modeTransproxy
-            true
+            if (DataStore.relayEnabled && newValue as String? != Key.modeVpn) {
+                Toast.makeText(requireContext(), R.string.relay_vpn_mode_only, Toast.LENGTH_LONG).show()
+                false
+            } else {
+                portTransproxy.isEnabled = newValue as String? == Key.modeTransproxy
+                true
+            }
         }
         val listener: (BaseService.State) -> Unit = {
             val stopped = it == BaseService.State.Stopped
