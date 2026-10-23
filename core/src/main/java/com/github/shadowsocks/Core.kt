@@ -130,11 +130,18 @@ object Core {
         if (DataStore.publicStore.getLong(Key.assetUpdateTime, -1) != packageInfo.lastUpdateTime) {
             val assetManager = app.assets
             try {
-                for (file in assetManager.list("acl")!!) assetManager.open("acl/$file").use { input ->
-                    File(deviceStorage.noBackupFilesDir, file).outputStream().use { output -> input.copyTo(output) }
+                val aclFiles = assetManager.list("acl")
+                if (aclFiles.isNullOrEmpty()) {
+                    Timber.w("ACL assets are missing; continuing without copying them")
+                } else for (file in aclFiles) {
+                    assetManager.open("acl/$file").use { input ->
+                        File(deviceStorage.noBackupFilesDir, file).outputStream().use { output -> input.copyTo(output) }
+                    }
                 }
-            } catch (e: IOException) {
-                Timber.w(e)
+            } catch (e: Exception) {
+                // ACL asset extraction is not required to show the UI. A failed cache copy must
+                // not terminate Application.onCreate; retry it on the next launch instead.
+                Timber.w(e, "Failed to copy ACL assets")
             }
             DataStore.publicStore.putLong(Key.assetUpdateTime, packageInfo.lastUpdateTime)
         }
