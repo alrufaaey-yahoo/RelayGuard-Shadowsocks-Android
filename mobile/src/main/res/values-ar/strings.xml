@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="relay_settings_entry">ترحيل Script</string>
+    <string name="relay_settings_summary">وضع RelayGuard أمام Shadowsocks عند تشغيل وضع VPN</string>
+    <string name="relay_settings_title">ترحيل Script</string>
+    <string name="relay_enabled">تفعيل سلسلة Script relay</string>
+    <string name="relay_enabled_summary">حركة التطبيقات ← RelayGuard ← ملف Shadowsocks الحالي ← VPS (وضع VPN فقط)</string>
+    <string name="relay_deployment_url">رابط/روابط Deployment</string>
+    <string name="relay_deployment_summary">الصق رابط Apps Script المنتهي بـ /exec أو معرّف النشر. افصل بين عدة قيم بمسافة أو فاصلة أو فاصلة منقوطة</string>
+    <string name="relay_auth_key">auth_key</string>
+    <string name="relay_auth_key_summary">المفتاح السري المشترك مع نشر Apps Script</string>
+    <string name="relay_auth_key_missing">غير مضبوط</string>
+    <string name="relay_auth_key_set">مضبوط (مخفي)</string>
+    <string name="relay_front_domain">front_domain</string>
+    <string name="relay_install_ca">تثبيت شهادة RelayGuard</string>
+    <string name="relay_install_ca_summary">قد تحتاج التطبيقات إلى الشهادة لقبول HTTPS. لا تثبّت إلا شهادة من نشر تثق به</string>
+    <string name="relay_ca_install_opened">فُتحت إعدادات الشهادات. في Android 11 وما بعده ثبّت Downloads/relayguard-ca.crt من الإعدادات عبر البحث عن «شهادة CA» ثم «VPN والتطبيقات».</string>
+    <string name="relay_ca_install_failed">تعذّر تصدير شهادة RelayGuard أو فتح المثبّت.</string>
+    <string name="relay_advanced">متقدم</string>
+    <string name="relay_verify_ssl">التحقق من شهادات TLS للخادم</string>
+    <string name="relay_youtube">تمرير YouTube عبر Apps Script</string>
+    <string name="relay_log_level">مستوى السجل</string>
+    <string name="relay_parallel">طلبات الترحيل المتوازية</string>
+    <string name="relay_block_quic">حظر QUIC (UDP/443)</string>
+    <string name="relay_block_stun">حظر STUN/TURN عبر UDP</string>
+    <string name="relay_block_doh">حظر DNS-over-HTTPS</string>
+    <string name="relay_tunnel_doh">تمرير DNS-over-HTTPS عبر الترحيل</string>
+    <string name="relay_force_http1">فرض HTTP/1.1 (تعطيل HTTP/2)</string>
+    <string name="relay_coalesce_step">خطوة تجميع الدفعة (مللي ثانية)</string>
+    <string name="relay_coalesce_max">أقصى انتظار للدفعة (مللي ثانية)</string>
+    <string name="relay_missing_credentials">أدخل رابط Deployment وauth_key قبل تفعيل Script relay.</string>
+    <string name="relay_vpn_mode_only">يتطلب Script relay ضبط وضع خدمة Shadowsocks على VPN.</string>
+    <string-array name="relay_log_levels"><item>تتبّع</item><item>تصحيح</item><item>معلومات</item><item>تحذير</item><item>خطأ</item><item>إيقاف</item></string-array>
+    <string-array name="relay_log_level_values"><item>trace</item><item>debug</item><item>info</item><item>warn</item><item>error</item><item>off</item></string-array>
+    <string-array name="relay_parallel_entries"><item>إيقاف</item><item>2</item><item>3</item><item>4</item><item>5</item></string-array>
+    <string-array name="relay_parallel_values"><item>1</item><item>2</item><item>3</item><item>4</item><item>5</item></string-array>
+</resources>

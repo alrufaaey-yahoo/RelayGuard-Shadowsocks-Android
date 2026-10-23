@@ -1,0 +1,18 @@
+# Gradle & Android Studio
+local.properties
+.gradle/
+.externalNativeBuild/
+build/
+captures/
+release/
+
+.idea/
+*.iml
+
+# release apks
+*.apk
+.DS_Store
+
+# Generated Rust JNI binaries are produced by Gradle
+**/src/main/jniLibs/
+*.so

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+    <SwitchPreference
+        app:key="relayEnabled"
+        app:title="@string/relay_enabled"
+        app:summary="@string/relay_enabled_summary"
+        app:defaultValue="false" />
+    <EditTextPreference
+        app:key="relayDeploymentUrls"
+        app:title="@string/relay_deployment_url"
+        app:dialogTitle="@string/relay_deployment_url"
+        app:summary="@string/relay_deployment_summary"
+        app:useSimpleSummaryProvider="true" />
+    <EditTextPreference
+        app:key="relayAuthKey"
+        app:title="@string/relay_auth_key"
+        app:dialogTitle="@string/relay_auth_key"
+        app:summary="@string/relay_auth_key_summary" />
+    <EditTextPreference
+        app:key="relayFrontDomain"
+        app:title="@string/relay_front_domain"
+        app:dialogTitle="@string/relay_front_domain"
+        app:defaultValue="www.google.com"
+        app:useSimpleSummaryProvider="true" />
+    <Preference
+        app:key="relayInstallCa"
+        app:title="@string/relay_install_ca"
+        app:summary="@string/relay_install_ca_summary" />
+
+    <PreferenceCategory app:title="@string/relay_advanced">
+        <SwitchPreference app:key="relayVerifySsl" app:title="@string/relay_verify_ssl" app:defaultValue="true" />
+        <SwitchPreference app:key="relayYoutubeViaRelay" app:title="@string/relay_youtube" app:defaultValue="false" />
+        <ListPreference app:key="relayLogLevel" app:title="@string/relay_log_level" app:entries="@array/relay_log_levels" app:entryValues="@array/relay_log_level_values" app:defaultValue="info" app:useSimpleSummaryProvider="true" />
+        <ListPreference app:key="relayParallel" app:title="@string/relay_parallel" app:entries="@array/relay_parallel_entries" app:entryValues="@array/relay_parallel_values" app:defaultValue="1" app:useSimpleSummaryProvider="true" />
+        <SwitchPreference app:key="relayBlockQuic" app:title="@string/relay_block_quic" app:defaultValue="true" />
+        <SwitchPreference app:key="relayBlockStun" app:title="@string/relay_block_stun" app:defaultValue="true" />
+        <SwitchPreference app:key="relayBlockDoh" app:title="@string/relay_block_doh" app:defaultValue="true" />
+        <SwitchPreference app:key="relayTunnelDoh" app:title="@string/relay_tunnel_doh" app:defaultValue="true" />
+        <SwitchPreference app:key="relayForceHttp1" app:title="@string/relay_force_http1" app:defaultValue="false" />
+        <EditTextPreference app:key="relayCoalesceStepMs" app:title="@string/relay_coalesce_step" app:defaultValue="10" app:useSimpleSummaryProvider="true" />
+        <EditTextPreference app:key="relayCoalesceMaxMs" app:title="@string/relay_coalesce_max" app:defaultValue="1000" app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+</PreferenceScreen>

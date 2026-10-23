@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="relay_settings_entry">Script relay</string>
+    <string name="relay_settings_summary">Place RelayGuard in front of Shadowsocks when VPN mode is active</string>
+    <string name="relay_settings_title">Script relay</string>
+    <string name="relay_enabled">Enable Script relay chain</string>
+    <string name="relay_enabled_summary">App traffic → RelayGuard → this Shadowsocks profile → VPS (VPN mode only)</string>
+    <string name="relay_deployment_url">Deployment URL(s)</string>
+    <string name="relay_deployment_summary">Paste one or more Apps Script /exec URLs or deployment IDs, separated by spaces, commas, or semicolons</string>
+    <string name="relay_auth_key">auth_key</string>
+    <string name="relay_auth_key_summary">Shared secret for your Apps Script deployment</string>
+    <string name="relay_auth_key_missing">Not configured</string>
+    <string name="relay_auth_key_set">Configured (hidden)</string>
+    <string name="relay_front_domain">front_domain</string>
+    <string name="relay_install_ca">Install RelayGuard CA</string>
+    <string name="relay_install_ca_summary">Required by many apps to trust HTTPS inspection; only install a CA from a deployment you trust</string>
+    <string name="relay_ca_install_opened">Certificate setup opened. On Android 11+, install Downloads/relayguard-ca.crt from Settings → search “CA certificate” → VPN and apps.</string>
+    <string name="relay_ca_install_failed">Could not export or open the RelayGuard CA certificate.</string>
+    <string name="relay_advanced">Advanced</string>
+    <string name="relay_verify_ssl">Verify upstream TLS certificates</string>
+    <string name="relay_youtube">Route YouTube through Apps Script</string>
+    <string name="relay_log_level">Log level</string>
+    <string name="relay_parallel">Parallel relay requests</string>
+    <string name="relay_block_quic">Block QUIC (UDP/443)</string>
+    <string name="relay_block_stun">Block STUN/TURN UDP</string>
+    <string name="relay_block_doh">Block DNS-over-HTTPS</string>
+    <string name="relay_tunnel_doh">Tunnel DNS-over-HTTPS through the relay</string>
+    <string name="relay_force_http1">Force HTTP/1.1 (disable HTTP/2)</string>
+    <string name="relay_coalesce_step">Batch coalesce step (ms)</string>
+    <string name="relay_coalesce_max">Maximum batch wait (ms)</string>
+    <string name="relay_missing_credentials">Enter a Deployment URL and auth_key before enabling Script relay.</string>
+    <string name="relay_vpn_mode_only">Script relay requires Shadowsocks Service mode = VPN.</string>
+    <string-array name="relay_log_levels">
+        <item>Trace</item><item>Debug</item><item>Info</item><item>Warn</item><item>Error</item><item>Off</item>
+    </string-array>
+    <string-array name="relay_log_level_values">
+        <item>trace</item><item>debug</item><item>info</item><item>warn</item><item>error</item><item>off</item>
+    </string-array>
+    <string-array name="relay_parallel_entries">
+        <item>Off</item><item>2</item><item>3</item><item>4</item><item>5</item>
+    </string-array>
+    <string-array name="relay_parallel_values">
+        <item>1</item><item>2</item><item>3</item><item>4</item><item>5</item>
+    </string-array>
+</resources>
