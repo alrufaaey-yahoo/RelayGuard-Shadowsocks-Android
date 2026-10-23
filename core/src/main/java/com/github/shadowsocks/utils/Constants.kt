@@ -79,6 +79,11 @@ object Key {
     const val relayForceHttp1 = "relayForceHttp1"
     const val relayCoalesceStepMs = "relayCoalesceStepMs"
     const val relayCoalesceMaxMs = "relayCoalesceMaxMs"
+    const val httpConnectEnabled = "httpConnectEnabled"
+    const val httpConnectServer = "httpConnectServer"
+    const val httpConnectPort = "httpConnectPort"
+    const val httpConnectUsername = "httpConnectUsername"
+    const val httpConnectPassword = "httpConnectPassword"
 
     const val assetUpdateTime = "assetUpdateTime"
 

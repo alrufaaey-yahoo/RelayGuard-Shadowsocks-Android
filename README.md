@@ -16,7 +16,7 @@
 
 **مهم:** سلسلة relay مخصصة لوضع VPN في Shadowsocks. عند إيقافها، يعود TUN إلى SOCKS الأصلي الخاص بـShadowsocks. تطبيقات HTTPS التي لا تثق بشهادات المستخدم أو تستخدم certificate pinning قد لا تعمل مع وضع MITM؛ بعض التطبيقات لا تقبل شهادات CA التي يضيفها المستخدم أصلًا.
 
-**حدّ اتجاه النقل:** هذا الدمج يضع RelayGuard أمام حركة التطبيقات ويستخدم SOCKS المحلي لـShadowsocks كوصلة upstream لـRelayGuard. لا يمرّر اتصال `ss-local` نفسه إلى VPS عبر Google Apps Script؛ اتصال عميل Shadowsocks بخادمه يبقى اتصال TCP مباشرًا. نشر Apps Script و`UrlFetchApp` يدعمان جلب HTTP/HTTPS، ولا يوفران نفق TCP خامًا لبروتوكول Shadowsocks. لتنفيذ الاتجاه العكسي الذي يجعل اتصال Shadowsocks بالخادم يعبر RelayGuard، يلزم endpoint أو مكوّن خادمي يدعم TCP خامًا (مثل SOCKS5/HTTP CONNECT أو WebSocket مع مكوّن متوافق على الخادم)، ولا تكفي حقول Deployment URL و`auth_key` و`front_domain` وحدها.
+**حدّ اتجاه النقل:** Script relay يضع RelayGuard أمام حركة التطبيقات، ويستخدم اتصال Shadowsocks للوصول إلى Apps Script؛ جلب Apps Script لصفحات الويب يخرج من شبكة Google. لا يحوّل Google Apps Script إلى نفق TCP خام، ولا توفر حقول `Deployment URL` و`auth_key` و`front_domain` وحدها وسيطًا إلى VPS. يتضمن هذا الإصدار عميل HTTP CONNECT اختياريًا لنقل اتصال Shadowsocks إلى VPS عبر وسيط CONNECT حقيقي مُعد مسبقًا؛ التطبيق لا ينشئ هذا الوسيط ولا يستضيفه.
 
 ## الإعداد على الهاتف
 
@@ -31,6 +31,12 @@
 ## خيارات Advanced المدمجة
 
 تتضمن صفحة الإعدادات: التحقق من شهادة TLS، YouTube عبر Apps Script، مستوى السجل، عدد الطلبات المتوازية، حظر QUIC وSTUN وDoH، تمرير DoH عبر الترحيل، فرض HTTP/1.1، وإعدادات تجميع الدفعات. تم تثبيت `upstream_socks5` داخليًا على منفذ Shadowsocks المحلي كي لا ينفصل ترتيب السلسلة أو يسمح بتجاوزها.
+
+## نقل اتصال Shadowsocks عبر HTTP CONNECT
+
+يوفر هذا الإصدار خيارًا منفصلًا بعنوان **Shadowsocks server transport (HTTP CONNECT)**. عند تفعيله، يرسل عميل Shadowsocks طلب `CONNECT <vps-host>:<vps-port>` إلى وسيط HTTP CONNECT حقيقي، ثم ينقل تدفق Shadowsocks المشفر داخل النفق. أدخل مضيف ومنفذ الوسيط في صفحة Script relay؛ بيانات الوسيط اختيارية. هذا الخيار يغلّف اتصال العميل بخادم Shadowsocks نفسه، وليس طلبات الإنترنت التي يجلبها Apps Script. لا تفعّل سلسلة Script relay إذا كان المطلوب أن يرى `myip.com` عنوان خروج VPS.
+
+وسيط HTTP CONNECT يجب أن يكون خدمة متاحة من الهاتف ومصرحًا لها بالاتصال بعنوان VPS ومنفذه. رابط Google Apps Script أو حقول `Deployment URL` و`auth_key` و`front_domain` لا توفر CONNECT ولا يمكن استعمالها بدل ذلك الوسيط. إذا كان المطلوب ظهور IP الـVPS في `myip.com`، أوقف **Enable Script relay chain** لأن Apps Script يجلب صفحات HTTP/HTTPS من شبكة Google، ثم فعّل HTTP CONNECT واستخدم ملف Shadowsocks. النقل الحالي TCP فقط؛ عند تفعيله يتوقف UDP وUDP fallback، كما لا تدعم هذه النسخة إضافات Shadowsocks أو CONNECT-over-TLS/WebSocket. مصادقة Basic عبر HTTP العادي غير مشفرة؛ لا تستخدم بيانات اعتماد حساسة إلا مع وسيط موثوق وشبكة مناسبة.
 
 ## البناء
 

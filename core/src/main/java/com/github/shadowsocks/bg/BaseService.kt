@@ -247,13 +247,17 @@ object BaseService {
             data.proxy!!.start(this,
                     File(Core.deviceStorage.noBackupFilesDir, "stat_main"),
                     File(configRoot, CONFIG_FILE),
-                    if (udpFallback == null && data.proxy?.plugin == null) "tcp_and_udp" else "tcp_only")
-            if (udpFallback?.plugin != null) throw ExpectedExceptionWrapper(IllegalStateException(
-                    "UDP fallback cannot have plugins"))
-            udpFallback?.start(this,
-                    File(Core.deviceStorage.noBackupFilesDir, "stat_udp"),
-                    File(configRoot, CONFIG_FILE_UDP),
-                    "udp_only", false)
+                    if (DataStore.httpConnectEnabled || udpFallback != null || data.proxy?.plugin != null) "tcp_only" else "tcp_and_udp")
+            if (!DataStore.httpConnectEnabled) {
+                if (udpFallback?.plugin != null) throw ExpectedExceptionWrapper(IllegalStateException(
+                        "UDP fallback cannot have plugins"))
+                udpFallback?.start(this,
+                        File(Core.deviceStorage.noBackupFilesDir, "stat_udp"),
+                        File(configRoot, CONFIG_FILE_UDP),
+                        "udp_only", false)
+            } else if (udpFallback != null) {
+                Timber.i("UDP fallback disabled while HTTP CONNECT transport is active")
+            }
             data.localDns = LocalDnsWorker(this::rawResolver).apply { start() }
         }
 

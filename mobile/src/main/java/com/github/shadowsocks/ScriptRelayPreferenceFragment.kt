@@ -30,6 +30,19 @@ class ScriptRelayPreferenceFragment : PreferenceFragmentCompat() {
         findPreference<EditTextPreference>(Key.relayFrontDomain)?.setOnBindEditTextListener {
             it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         }
+        findPreference<EditTextPreference>(Key.httpConnectServer)?.setOnBindEditTextListener {
+            it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        }
+        findPreference<EditTextPreference>(Key.httpConnectPort)?.setOnBindEditTextListener {
+            it.inputType = InputType.TYPE_CLASS_NUMBER
+        }
+        findPreference<EditTextPreference>(Key.httpConnectPassword)?.apply {
+            setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
+            summaryProvider = Preference.SummaryProvider<EditTextPreference> {
+                if (it.text.isNullOrBlank()) getString(R.string.http_connect_auth_missing)
+                else getString(R.string.http_connect_auth_configured)
+            }
+        }
         findPreference<Preference>("relayInstallCa")?.setOnPreferenceClickListener {
             try {
                 if (RelayCaInstaller.install(requireContext())) {
@@ -57,6 +70,21 @@ class ScriptRelayPreferenceFragment : PreferenceFragmentCompat() {
                     Toast.makeText(requireContext(), R.string.relay_missing_credentials, Toast.LENGTH_LONG).show()
                     false
                 } else true
+            }
+        findPreference<SwitchPreference>(Key.httpConnectEnabled)?.onPreferenceChangeListener =
+            Preference.OnPreferenceChangeListener { _, newValue ->
+                if (newValue == true) {
+                    val port = DataStore.httpConnectPort
+                    if (DataStore.httpConnectServer.isBlank() || port !in 1..65535) {
+                        Toast.makeText(requireContext(), R.string.http_connect_missing_proxy, Toast.LENGTH_LONG).show()
+                        return@OnPreferenceChangeListener false
+                    }
+                    if (DataStore.httpConnectUsername.isBlank() != DataStore.httpConnectPassword.isBlank()) {
+                        Toast.makeText(requireContext(), R.string.http_connect_auth_pair, Toast.LENGTH_LONG).show()
+                        return@OnPreferenceChangeListener false
+                    }
+                }
+                true
             }
     }
 

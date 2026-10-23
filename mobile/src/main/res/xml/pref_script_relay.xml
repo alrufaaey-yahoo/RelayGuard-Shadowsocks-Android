@@ -27,6 +27,30 @@
         app:title="@string/relay_install_ca"
         app:summary="@string/relay_install_ca_summary" />
 
+    <PreferenceCategory app:title="@string/http_connect_category">
+        <SwitchPreference
+            app:key="httpConnectEnabled"
+            app:title="@string/http_connect_enabled"
+            app:summary="@string/http_connect_enabled_summary"
+            app:defaultValue="false" />
+        <EditTextPreference
+            app:key="httpConnectServer"
+            app:title="@string/http_connect_server"
+            app:summary="@string/http_connect_server_summary"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:key="httpConnectPort"
+            app:title="@string/http_connect_port"
+            app:defaultValue="8080"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:key="httpConnectUsername"
+            app:title="@string/http_connect_username" />
+        <EditTextPreference
+            app:key="httpConnectPassword"
+            app:title="@string/http_connect_password" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/relay_advanced">
         <SwitchPreference app:key="relayVerifySsl" app:title="@string/relay_verify_ssl" app:defaultValue="true" />
         <SwitchPreference app:key="relayYoutubeViaRelay" app:title="@string/relay_youtube" app:defaultValue="false" />

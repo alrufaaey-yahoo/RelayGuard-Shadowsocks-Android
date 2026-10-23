@@ -157,4 +157,6 @@
   <string name="plugin_untrusted">Warning: This plugin does not seem to come from a known trusted source.</string>
   <string name="profile_plugin">Plugin: %s</string>
   <string name="plugin_auto_connect_unlock_only">This plugin might not work with Auto Connect</string>
+  <string name="core_http_connect_missing_proxy">Enter a valid HTTP CONNECT proxy host and port.</string>
+  <string name="core_http_connect_plugin_unsupported">HTTP CONNECT transport does not currently support Shadowsocks plugins.</string>
 </resources>

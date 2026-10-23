@@ -114,25 +114,32 @@ where
         A: Into<Address>,
         F: FnOnce(OutboundTcpStream) -> S,
     {
-        let stream = match svr_cfg.timeout() {
-            Some(d) => {
-                match time::timeout(
-                    d,
-                    OutboundTcpStream::connect_server_with_opts(&context, svr_cfg.tcp_external_addr(), opts),
+        let connect = async {
+            if let Some(proxy) = svr_cfg.http_connect_proxy() {
+                OutboundTcpStream::connect_server_through_http_connect(
+                    &context,
+                    svr_cfg.tcp_external_addr(),
+                    proxy,
+                    opts,
                 )
                 .await
-                {
-                    Ok(Ok(s)) => s,
-                    Ok(Err(e)) => return Err(e),
-                    Err(..) => {
-                        return Err(io::Error::new(
-                            ErrorKind::TimedOut,
-                            format!("connect {} timeout", svr_cfg.addr()),
-                        ));
-                    }
-                }
+            } else {
+                OutboundTcpStream::connect_server_with_opts(&context, svr_cfg.tcp_external_addr(), opts).await
             }
-            None => OutboundTcpStream::connect_server_with_opts(&context, svr_cfg.tcp_external_addr(), opts).await?,
+        };
+
+        let stream = match svr_cfg.timeout() {
+            Some(d) => match time::timeout(d, connect).await {
+                Ok(Ok(s)) => s,
+                Ok(Err(e)) => return Err(e),
+                Err(..) => {
+                    return Err(io::Error::new(
+                        ErrorKind::TimedOut,
+                        format!("connect {} timeout", svr_cfg.addr()),
+                    ));
+                }
+            },
+            None => connect.await?,
         };
 
         trace!(

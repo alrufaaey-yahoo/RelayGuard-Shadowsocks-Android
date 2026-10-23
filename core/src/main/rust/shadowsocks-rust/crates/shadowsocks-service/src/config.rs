@@ -70,8 +70,8 @@ use serde::{Deserialize, Serialize};
 use shadowsocks::relay::socks5::Address;
 use shadowsocks::{
     config::{
-        ManagerAddr, Mode, ReplayAttackPolicy, ServerAddr, ServerConfig, ServerSource, ServerUser, ServerUserManager,
-        ServerWeight,
+        HttpConnectProxy, ManagerAddr, Mode, ReplayAttackPolicy, ServerAddr, ServerConfig, ServerSource, ServerUser,
+        ServerUserManager, ServerWeight,
     },
     crypto::CipherKind,
     plugin::PluginConfig,
@@ -119,6 +119,8 @@ struct SSConfig {
     server: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     server_port: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    http_connect_proxy: Option<HttpConnectProxy>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     local_address: Option<String>,
@@ -360,6 +362,8 @@ struct SSServerExtConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     password: Option<String>,
     method: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    http_connect_proxy: Option<HttpConnectProxy>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     users: Option<Vec<SSServerUserConfig>>,
@@ -1975,6 +1979,17 @@ impl Config {
                 nsvr.set_source(server_source);
                 nsvr.set_mode(global_mode);
 
+                if let Some(proxy) = config.http_connect_proxy.clone() {
+                    if let Err(err) = proxy.validate() {
+                        return Err(Error::new(
+                            ErrorKind::Invalid,
+                            "invalid `http_connect_proxy`",
+                            Some(err.into()),
+                        ));
+                    }
+                    nsvr.set_http_connect_proxy(proxy);
+                }
+
                 if let Some(ref p) = config.plugin {
                     // SIP008 allows "plugin" to be an empty string
                     // Empty string implies "no plugin"
@@ -2082,6 +2097,17 @@ impl Config {
                     }
                 };
                 nsvr.set_source(server_source);
+
+                if let Some(proxy) = svr.http_connect_proxy.clone() {
+                    if let Err(err) = proxy.validate() {
+                        return Err(Error::new(
+                            ErrorKind::Invalid,
+                            "invalid `http_connect_proxy`",
+                            Some(err.into()),
+                        ));
+                    }
+                    nsvr.set_http_connect_proxy(proxy);
+                }
 
                 // Extensible Identity Header, Users
                 if let Some(users) = svr.users {
@@ -2960,6 +2986,7 @@ impl fmt::Display for Config {
                 };
                 jconf.timeout = svr.timeout().map(|t| t.as_secs());
                 jconf.mode = Some(svr.mode().to_string());
+                jconf.http_connect_proxy = svr.http_connect_proxy().cloned();
 
                 if let Some(ref acl) = inst.acl {
                     jconf.acl = Some(acl.file_path().to_str().unwrap().to_owned());
@@ -2987,6 +3014,7 @@ impl fmt::Display for Config {
                             Some(svr.password().to_string())
                         },
                         method: svr.method().to_string(),
+                        http_connect_proxy: svr.http_connect_proxy().cloned(),
                         users: svr.user_manager().map(|m| {
                             let mut vu = Vec::new();
                             for u in m.users_iter() {

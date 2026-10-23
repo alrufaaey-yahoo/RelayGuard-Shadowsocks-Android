@@ -34,4 +34,6 @@
     <string name="remote_port">"المنفذ"</string>
     <string name="sitekey">"كلمة المرور"</string>
     <string name="enc_method">"طريقة التشفير"</string>
+    <string name="core_http_connect_missing_proxy">"أدخل مضيفًا ومنفذًا صالحين لوسيط HTTP CONNECT."</string>
+    <string name="core_http_connect_plugin_unsupported">"نقل HTTP CONNECT لا يدعم حاليًا إضافات Shadowsocks."</string>
 </resources>

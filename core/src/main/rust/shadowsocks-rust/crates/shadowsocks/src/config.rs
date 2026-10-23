@@ -16,6 +16,7 @@ use byte_string::ByteStr;
 use bytes::Bytes;
 use cfg_if::cfg_if;
 use log::{error, warn};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::{self, Url};
 
@@ -400,6 +401,61 @@ pub enum ServerConfigError {
     InvalidUserKeyLength(CipherKind, usize, usize),
 }
 
+/// Optional HTTP CONNECT proxy used only for the TCP connection to a Shadowsocks server.
+#[derive(Clone, Deserialize, Serialize)]
+pub struct HttpConnectProxy {
+    pub server: String,
+    pub server_port: u16,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
+}
+
+impl Debug for HttpConnectProxy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HttpConnectProxy")
+            .field("server", &self.server)
+            .field("server_port", &self.server_port)
+            .field("username", &self.username.as_ref().map(|_| "[redacted]"))
+            .field("password", &self.password.as_ref().map(|_| "[redacted]"))
+            .finish()
+    }
+}
+
+impl HttpConnectProxy {
+    /// Validate values that will be placed in an HTTP CONNECT request.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.server.trim().is_empty()
+            || self
+                .server
+                .bytes()
+                .any(|b| b.is_ascii_control() || b.is_ascii_whitespace())
+        {
+            return Err("HTTP CONNECT proxy server must be a hostname or IP address");
+        }
+        if self.server_port == 0 {
+            return Err("HTTP CONNECT proxy port must be between 1 and 65535");
+        }
+        if self.username.is_some() != self.password.is_some() {
+            return Err("HTTP CONNECT username and password must be configured together");
+        }
+        if let Some(username) = &self.username {
+            if username.contains(':') || username.bytes().any(|b| b.is_ascii_control()) {
+                return Err("HTTP CONNECT username contains an invalid character");
+            }
+        }
+        if self
+            .password
+            .as_ref()
+            .is_some_and(|password| password.bytes().any(|b| b.is_ascii_control()))
+        {
+            return Err("HTTP CONNECT password contains an invalid character");
+        }
+        Ok(())
+    }
+}
+
 /// Configuration for a server
 #[derive(Clone, Debug)]
 pub struct ServerConfig {
@@ -413,6 +469,8 @@ pub struct ServerConfig {
     enc_key: Box<[u8]>,
     /// Handshake timeout (connect)
     timeout: Option<Duration>,
+    /// Optional HTTP CONNECT proxy for the server's outbound TCP transport.
+    http_connect_proxy: Option<HttpConnectProxy>,
 
     /// Extensible Identity Headers (AEAD-2022)
     ///
@@ -594,6 +652,7 @@ impl ServerConfig {
             identity_keys: Arc::new(identity_keys),
             user_manager: None,
             timeout: None,
+            http_connect_proxy: None,
             plugin: None,
             plugin_addr: None,
             remarks: None,
@@ -623,6 +682,16 @@ impl ServerConfig {
     /// Set plugin
     pub fn set_plugin(&mut self, p: PluginConfig) {
         self.plugin = Some(p);
+    }
+
+    /// Configure an HTTP CONNECT proxy for outbound TCP connections to this server.
+    pub fn set_http_connect_proxy(&mut self, proxy: HttpConnectProxy) {
+        self.http_connect_proxy = Some(proxy);
+    }
+
+    /// Get the configured HTTP CONNECT proxy, if any.
+    pub fn http_connect_proxy(&self) -> Option<&HttpConnectProxy> {
+        self.http_connect_proxy.as_ref()
     }
 
     /// Set server addr
